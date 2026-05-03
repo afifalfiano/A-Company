@@ -156,6 +156,21 @@ export function ProjectDetail({ project, onClose }: Props) {
             >
               📥 TRD
             </button>
+            {project.generated_code && (
+              <a
+                href={`/download/${project.project_id}`}
+                style={{
+                  background: "#222232", border: "1px solid #2a2a3a",
+                  color: "#7F77DD", borderRadius: "8px",
+                  padding: "6px 12px", cursor: "pointer", fontSize: "12px",
+                  display: "flex", alignItems: "center", gap: "4px",
+                  textDecoration: "none",
+                }}
+                title="Download Generated Code"
+              >
+                📦 Download Code
+              </a>
+            )}
             <button
               onClick={onClose}
               style={{
@@ -300,6 +315,43 @@ export function ProjectDetail({ project, onClose }: Props) {
             </div>
             <Field label="Feedback" value={project.ceo_review.feedback} />
           </Section>
+
+          {/* Generated Code */}
+          {project.generated_code && (
+            <Section title="Generated Code" color="#7F77DD">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div>
+                  <span style={{ fontSize: "11px", color: "#666680" }}>Mode</span>
+                  <p style={{ fontSize: "13px", color: "#a89eff", textTransform: "capitalize" }}>
+                    {project.generated_code.mode}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "#666680" }}>Files</span>
+                  <p style={{ fontSize: "13px", color: "#e2e2e8" }}>
+                    {project.generated_code.file_count}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "#666680" }}>Generated</span>
+                  <p style={{ fontSize: "11px", color: "#9999b0" }}>
+                    {new Date(project.generated_code.generated_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`/download/${project.project_id}`}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  marginTop: "12px", background: "#7F77DD", color: "#fff",
+                  padding: "8px 16px", borderRadius: "8px", fontSize: "12px",
+                  fontWeight: 600, textDecoration: "none",
+                }}
+              >
+                📦 Download ZIP
+              </a>
+            </Section>
+          )}
         </div>
       </div>
     </div>

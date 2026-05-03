@@ -123,6 +123,7 @@ describe("AgentActivity", () => {
       total_input_tokens: 0,
       total_output_tokens: 0,
       total_tokens: 0,
+      generated_code: null,
     };
     render(
       <AgentActivity

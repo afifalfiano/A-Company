@@ -4,6 +4,7 @@ import {
   AgentName,
   ProjectItem,
   WsMessage,
+  CodeGenMode,
 } from "../models";
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -29,6 +30,9 @@ export function useWebSocket(url: string) {
   const [processing, setProcessing] = useState(false);
   const [activeAgent, setActiveAgent] = useState<AgentName | null>(null);
   const [pendingGate, setPendingGate] = useState<{ projectId: string; type: "planning" | "execution" } | null>(null);
+  const [codeGenMode, setCodeGenMode] = useState<CodeGenMode | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [zipUrl, setZipUrl] = useState<string | null>(null);
 
   // Persist projects to localStorage whenever they change
   useEffect(() => {
@@ -145,6 +149,28 @@ export function useWebSocket(url: string) {
           setProcessing(false);
           break;
 
+        case "code_gen_start":
+          setIsGenerating(true);
+          setCodeGenMode(null);
+          setZipUrl(null);
+          break;
+
+        case "code_gen_done":
+          setIsGenerating(false);
+          setCodeGenMode(msg.payload.metadata.mode);
+          break;
+
+        case "code_gen_download_ready":
+          setZipUrl(msg.payload.zip_url);
+          break;
+
+        case "code_gen_error":
+          setIsGenerating(false);
+          setCodeGenMode(null);
+          setZipUrl(null);
+          console.error("[CodeGen Error]", msg.payload.message);
+          break;
+
         case "error":
           setProcessing(false);
           setActiveAgent(null);
@@ -199,6 +225,15 @@ export function useWebSocket(url: string) {
     }));
   }, []);
 
+  const startCodeGeneration = useCallback((projectId: string, mode: CodeGenMode) => {
+    wsRef.current?.send(JSON.stringify({
+      type: "generate_code",
+      payload: { project_id: projectId, mode },
+    }));
+  }, []);
+
+  const clearZipUrl = useCallback(() => setZipUrl(null), []);
+
   const clearProjects = useCallback(() => setProjects([]), []);
 
   return {
@@ -208,9 +243,14 @@ export function useWebSocket(url: string) {
     processing,
     activeAgent,
     pendingGate,
+    codeGenMode,
+    isGenerating,
+    zipUrl,
     sendProject,
     startPlanning,
     startExecution,
+    startCodeGeneration,
+    clearZipUrl,
     approvePlanning,
     approveExecution,
     clearProjects,

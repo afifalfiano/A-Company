@@ -57,7 +57,7 @@ export async function ctoAgent(
     new HumanMessage(`Project: ${title}\n\nDescription: ${description}`),
   ]);
 
-  const usage = response.usage_metadata ?? {};
+  const usage = response.usage_metadata as { input_tokens?: number; output_tokens?: number } ?? {};
   const inputTokens = usage.input_tokens ?? 0;
   const outputTokens = usage.output_tokens ?? 0;
   emit({

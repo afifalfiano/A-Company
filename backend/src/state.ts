@@ -14,7 +14,8 @@ export type AgentName =
   | "designer"
   | "qa"
   | "business_marketing"
-  | "finalize";
+  | "finalize"
+  | "code_generator";
 
 export type ProjectPhase =
   | "intake"
@@ -130,6 +131,15 @@ export interface CeoReview {
   launch_decision: string;
 }
 
+export type CodeGenMode = "monolith" | "monorepo";
+
+export interface CodeGenMetadata {
+  generated_at: number;
+  mode: CodeGenMode;
+  file_count: number;
+  zip_path: string;
+}
+
 export interface ProjectItem {
   project_id: string;
   project_title: string;
@@ -154,6 +164,8 @@ export interface ProjectItem {
   // Error recovery
   retry_count: number;
   failed_agent: string | null;
+  // Code generation metadata
+  generated_code: CodeGenMetadata | null;
   // Revision notes from human
   revision_notes: string[];
   // Token usage tracking per agent (accumulated across retries)
@@ -199,6 +211,7 @@ function emptyProjectExtras() {
     execution_approved: false,
     retry_count: 0,
     failed_agent: null as string | null,
+    generated_code: null as CodeGenMetadata | null,
     revision_notes: [] as string[],
     token_usage: {} as Record<string, { input_tokens: number; output_tokens: number }>,
     total_input_tokens: 0,

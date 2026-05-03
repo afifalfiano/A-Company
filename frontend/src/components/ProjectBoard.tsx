@@ -24,11 +24,13 @@ interface Props {
   onApprovePlanning: (id: string, approve: boolean, notes?: string) => void;
   onApproveExecution: (id: string, approve: boolean, notes?: string) => void;
   onClear: () => void;
+  onGenerateCode: (id: string) => void;
 }
 
 export function ProjectBoard({
   projects, selectedId, onSelect,
   onStartPlanning, onStartExecution, onApprovePlanning, onApproveExecution, onClear,
+  onGenerateCode,
 }: Props) {
   return (
     <div className="panel">
@@ -217,8 +219,29 @@ export function ProjectBoard({
               )}
 
               {project.current_phase === "delivered" && (
-                <div style={{ marginTop: "10px", padding: "8px 12px", background: "#1a3028", border: "1px solid #2a5040", borderRadius: "8px", textAlign: "center" }}>
-                  <span style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px" }}>✓ Project Delivered</span>
+                <div style={{ marginTop: "10px" }}>
+                  {project.generated_code ? (
+                    <div style={{ display: "flex", gap: "6px", flexDirection: "column" }}>
+                      <div style={{ padding: "8px 12px", background: "#1a3028", border: "1px solid #2a5040", borderRadius: "8px", textAlign: "center" }}>
+                        <span style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px" }}>✓ {project.generated_code.file_count} files generated</span>
+                      </div>
+                      <button
+                        className="btn-primary"
+                        style={{ width: "100%", justifyContent: "center", background: "#7F77DD" }}
+                        onClick={(e) => { e.stopPropagation(); onGenerateCode(project.project_id); }}
+                      >
+                        ⚡ Regenerate
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn-primary"
+                      style={{ width: "100%", justifyContent: "center", background: "#7F77DD" }}
+                      onClick={(e) => { e.stopPropagation(); onGenerateCode(project.project_id); }}
+                    >
+                      ⚡ Generate Code
+                    </button>
+                  )}
                 </div>
               )}
 

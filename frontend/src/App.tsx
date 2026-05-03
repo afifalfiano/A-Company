@@ -3,6 +3,7 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { AgentActivity } from "./components/AgentActivity";
 import { ProjectBoard } from "./components/ProjectBoard";
 import { ProjectDetail } from "./components/ProjectDetail";
+import { CodeGenModal } from "./components/CodeGenModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AgentName } from "./models";
 
@@ -13,12 +14,13 @@ const EXAMPLE_PROJECTS = [
 ];
 
 export default function App() {
-  const { connected, events, projects, processing, activeAgent, sendProject, startPlanning, startExecution, approvePlanning, approveExecution, clearProjects } =
+  const { connected, events, projects, processing, activeAgent, codeGenMode, isGenerating, zipUrl, sendProject, startPlanning, startExecution, startCodeGeneration, approvePlanning, approveExecution, clearProjects } =
     useWebSocket("ws://localhost:3001");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState("");
   const [descInput, setDescInput] = useState("");
+  const [codeGenProjectId, setCodeGenProjectId] = useState<string | null>(null);
 
   const selectedProject = projects.find((p) => p.project_id === selectedId) ?? null;
 
@@ -100,12 +102,29 @@ export default function App() {
           onApprovePlanning={approvePlanning}
           onApproveExecution={approveExecution}
           onClear={clearProjects}
+          onGenerateCode={(id) => setCodeGenProjectId(id)}
         />
       </div>
 
       {selectedProject && (
         <ProjectDetail project={selectedProject} onClose={() => setSelectedId(null)} />
       )}
+
+      {codeGenProjectId && (() => {
+        const proj = projects.find((p) => p.project_id === codeGenProjectId);
+        if (!proj) return null;
+        return (
+          <CodeGenModal
+            projectId={proj.project_id}
+            projectTitle={proj.project_title}
+            isGenerating={isGenerating}
+            zipUrl={zipUrl}
+            codeGenMode={codeGenMode}
+            onGenerate={startCodeGeneration}
+            onClose={() => setCodeGenProjectId(null)}
+          />
+        );
+      })()}
     </div>
     </ErrorBoundary>
   );

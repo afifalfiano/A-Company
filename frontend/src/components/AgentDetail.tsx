@@ -100,6 +100,7 @@ export function AgentDetail({ agent, project, onClose }: Props) {
       { label: "Test Cases", value: project.qa_output.test_cases.map(tc => `${tc.name} (${tc.type})`) },
     ],
     finalize: [],
+    code_generator: [],
   };
 
   const fields = outputs[agent] ?? [];

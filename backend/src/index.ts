@@ -3,12 +3,15 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { createReadStream, existsSync } from "fs";
+import path from "path";
 import { buildGraph } from "./graph.js";
 import {
   CompanyStateType,
   ProjectItem,
   AgentEvent,
   ProjectPhase,
+  CodeGenMode,
 } from "./state.js";
 import { randomUUID } from "crypto";
 
@@ -44,6 +47,7 @@ function emptyProjectExtras() {
     execution_approved: false,
     retry_count: 0,
     failed_agent: null as string | null,
+    generated_code: null as null,
     revision_notes: [] as string[],
     token_usage: {} as Record<string, { input_tokens: number; output_tokens: number }>,
     total_input_tokens: 0,
@@ -314,6 +318,46 @@ wss.on("connection", (ws) => {
         if (proj) projects.set(projectId, { ...proj, is_running: false });
       }
     }
+
+    if (msg.type === "generate_code") {
+      const { project_id: projectId, mode } = msg.payload as { project_id?: string; mode?: CodeGenMode };
+      if (!projectId) {
+        send(ws, { type: "error", payload: { message: "project_id required" } });
+        return;
+      }
+      const project = projects.get(projectId);
+      if (!project) {
+        send(ws, { type: "error", payload: { message: "Project not found" } });
+        return;
+      }
+      if (project.current_phase !== "delivered") {
+        send(ws, { type: "error", payload: { message: "Project must be in delivered phase" } });
+        return;
+      }
+
+      send(ws, { type: "code_gen_start", payload: { project_id: projectId } });
+
+      const emit = (event: AgentEvent) => broadcast({ type: "agent_event", payload: event });
+      const graph = buildGraph(emit);
+
+      try {
+        const result = await graph.invoke({
+          raw_title: project.project_title,
+          raw_description: project.project_description,
+          current_project: { ...project, generated_code: { generated_at: Date.now(), mode, file_count: 0, zip_path: "" } },
+          agent_events: [],
+          next_phase: "execution",
+        });
+        const updated = result.current_project;
+        projects.set(projectId, updated);
+        send(ws, { type: "code_gen_done", payload: { project_id: projectId, metadata: updated.generated_code! } });
+        send(ws, { type: "code_gen_download_ready", payload: { project_id: projectId, zip_url: `/download/${projectId}` } });
+        broadcast({ type: "project_update", payload: { project: updated } }, ws);
+      } catch (err) {
+        console.error("[CodeGen Error]", err);
+        send(ws, { type: "code_gen_error", payload: { project_id: projectId, message: String(err) } });
+      }
+    }
     } catch (err) {
       console.error("[WS Handler Error]", err);
       send(ws, { type: "error", payload: { message: "Internal server error" } });
@@ -348,6 +392,17 @@ app.post("/projects", express.json(), (req, res) => {
   const project = makeEmptyProject(title.trim(), description?.trim() ?? "");
   projects.set(project.project_id, project);
   res.status(201).json({ project });
+});
+
+app.get("/download/:projectId", (req, res) => {
+  const zipPath = path.resolve("./generated", `${req.params.projectId}.zip`);
+  if (!existsSync(zipPath)) {
+    res.status(404).json({ error: "Zip not found" });
+    return;
+  }
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${req.params.projectId}.zip"`);
+  createReadStream(zipPath).pipe(res);
 });
 
 // ─── Start ───────────────────────────────────────────────────────────────────

@@ -61,7 +61,7 @@ export async function createAgent(
 
     const data = parseAgentResponse(response.content as string) as AgentOutput;
 
-    const usage = response.usage_metadata ?? {};
+    const usage = response.usage_metadata as { input_tokens?: number; output_tokens?: number } ?? {};
     const tokenUsage = {
       input_tokens: usage.input_tokens ?? 0,
       output_tokens: usage.output_tokens ?? 0,

@@ -78,7 +78,7 @@ Description: ${project.project_description}
     new HumanMessage(context),
   ]);
 
-  const usage = response.usage_metadata ?? {};
+  const usage = response.usage_metadata as { input_tokens?: number; output_tokens?: number } ?? {};
   const inputTokens = usage.input_tokens ?? 0;
   const outputTokens = usage.output_tokens ?? 0;
   emit({
