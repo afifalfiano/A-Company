@@ -14,15 +14,17 @@ const EXAMPLE_PROJECTS = [
 ];
 
 export default function App() {
-  const { connected, events, projects, processing, activeAgent, codeGenMode, isGenerating, zipUrl, sendProject, startPlanning, startExecution, startCodeGeneration, approvePlanning, approveExecution, clearProjects } =
+  const { connected, events, projects, processing, activeAgent, codeGenMode, isGenerating, generatingProjectId, zipUrl, sendProject, startPlanning, startExecution, startCodeGeneration, generateDesign, approvePlanning, approveExecution, clearProjects } =
     useWebSocket("ws://localhost:3001");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState("");
   const [descInput, setDescInput] = useState("");
   const [codeGenProjectId, setCodeGenProjectId] = useState<string | null>(null);
 
   const selectedProject = projects.find((p) => p.project_id === selectedId) ?? null;
+  const detailProject = projects.find((p) => p.project_id === detailProjectId) ?? null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,17 +99,20 @@ export default function App() {
           projects={projects}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          onViewDetail={(id) => setDetailProjectId(id)}
           onStartPlanning={startPlanning}
           onStartExecution={startExecution}
           onApprovePlanning={approvePlanning}
           onApproveExecution={approveExecution}
           onClear={clearProjects}
           onGenerateCode={(id) => setCodeGenProjectId(id)}
+          onGenerateDesign={(id) => generateDesign(id, "monolith")}
+          generatingProjectId={generatingProjectId}
         />
       </div>
 
-      {selectedProject && (
-        <ProjectDetail project={selectedProject} onClose={() => setSelectedId(null)} />
+      {detailProject && (
+        <ProjectDetail project={detailProject} onClose={() => setDetailProjectId(null)} />
       )}
 
       {codeGenProjectId && (() => {
@@ -115,8 +120,7 @@ export default function App() {
         if (!proj) return null;
         return (
           <CodeGenModal
-            projectId={proj.project_id}
-            projectTitle={proj.project_title}
+            project={proj}
             isGenerating={isGenerating}
             zipUrl={zipUrl}
             codeGenMode={codeGenMode}

@@ -87,11 +87,13 @@ export function ProjectDetail({ project, onClose }: Props) {
       background: "rgba(0,0,0,0.7)",
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: "20px",
+      pointerEvents: "none",
     }}>
       <div style={{
         background: "#13131c", border: "1px solid #2a2a3a",
         borderRadius: "16px", width: "100%", maxWidth: "800px",
         maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column",
+        pointerEvents: "auto",
       }}>
         {/* Header */}
         <div style={{

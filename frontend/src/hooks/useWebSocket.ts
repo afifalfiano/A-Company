@@ -32,6 +32,7 @@ export function useWebSocket(url: string) {
   const [pendingGate, setPendingGate] = useState<{ projectId: string; type: "planning" | "execution" } | null>(null);
   const [codeGenMode, setCodeGenMode] = useState<CodeGenMode | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingProjectId, setGeneratingProjectId] = useState<string | null>(null);
   const [zipUrl, setZipUrl] = useState<string | null>(null);
 
   // Persist projects to localStorage whenever they change
@@ -153,11 +154,13 @@ export function useWebSocket(url: string) {
           setIsGenerating(true);
           setCodeGenMode(null);
           setZipUrl(null);
+          setGeneratingProjectId(msg.payload.project_id);
           break;
 
         case "code_gen_done":
           setIsGenerating(false);
           setCodeGenMode(msg.payload.metadata.mode);
+          setGeneratingProjectId(null);
           break;
 
         case "code_gen_download_ready":
@@ -168,7 +171,30 @@ export function useWebSocket(url: string) {
           setIsGenerating(false);
           setCodeGenMode(null);
           setZipUrl(null);
+          setGeneratingProjectId(null);
           console.error("[CodeGen Error]", msg.payload.message);
+          break;
+
+        case "design_gen_start":
+          setIsGenerating(true);
+          setCodeGenMode(null);
+          setZipUrl(null);
+          setGeneratingProjectId(msg.payload.project_id);
+          break;
+
+        case "design_gen_done":
+          setIsGenerating(false);
+          setGeneratingProjectId(null);
+          break;
+
+        case "design_gen_download_ready":
+          setZipUrl(msg.payload.output_path);
+          break;
+
+        case "design_gen_error":
+          setIsGenerating(false);
+          setGeneratingProjectId(null);
+          console.error("[DesignGen Error]", msg.payload.message);
           break;
 
         case "error":
@@ -232,6 +258,13 @@ export function useWebSocket(url: string) {
     }));
   }, []);
 
+  const generateDesign = useCallback((projectId: string, mode: CodeGenMode) => {
+    wsRef.current?.send(JSON.stringify({
+      type: "generate_design",
+      payload: { project_id: projectId, mode },
+    }));
+  }, []);
+
   const clearZipUrl = useCallback(() => setZipUrl(null), []);
 
   const clearProjects = useCallback(() => setProjects([]), []);
@@ -245,11 +278,13 @@ export function useWebSocket(url: string) {
     pendingGate,
     codeGenMode,
     isGenerating,
+    generatingProjectId,
     zipUrl,
     sendProject,
     startPlanning,
     startExecution,
     startCodeGeneration,
+    generateDesign,
     clearZipUrl,
     approvePlanning,
     approveExecution,

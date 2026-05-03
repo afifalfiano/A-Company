@@ -149,8 +149,9 @@ export function AgentActivity({ events, processing, activeAgent, project, onAgen
           return (
             <div
               key={i}
-              className={`event-item status-${ev.status}`}
-              style={{ borderLeftColor: ev.status === "done" ? color : "transparent" }}
+              className={`event-item status-${ev.status} ${project ? "clickable" : ""}`}
+              style={{ borderLeftColor: project ? "#7F77DD" : (ev.status === "done" ? color : "transparent"), cursor: project ? "pointer" : undefined }}
+              onClick={() => project && handleAgentClick(ev.agent as AgentName)}
             >
               <span className="agent-badge" style={{ background: color }}>
                 {AGENT_SHORT[ev.agent] ?? "?"}
@@ -174,6 +175,7 @@ export function AgentActivity({ events, processing, activeAgent, project, onAgen
         <AgentActivityDetail
           agent={selectedAgent}
           events={events}
+          project={project}
           onClose={() => setSelectedAgent(null)}
         />
       )}

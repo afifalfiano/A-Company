@@ -8,7 +8,6 @@ import { businessMarketingAgent } from "./agents/business-marketing.js";
 import { engineerAgent } from "./agents/engineer.js";
 import { designerAgent } from "./agents/designer.js";
 import { qaAgent } from "./agents/qa.js";
-import { codeGeneratorAgent } from "./agents/code-generator.js";
 
 // ─── Phase barrier / checkpoint nodes ────────────────────────────────────────
 
@@ -160,22 +159,6 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("engineer",         (state: CompanyStateType) => withRetry("engineer",         engineerAgent,          state, emit));
   graph.addNode("designer",          (state: CompanyStateType) => withRetry("designer",         designerAgent,          state, emit));
   graph.addNode("qa",               (state: CompanyStateType) => withRetry("qa",               qaAgent,                state, emit));
-  graph.addNode("code_generator",   (state: CompanyStateType) => {
-    const project = state.current_project;
-    const mode = (project.generated_code?.mode) ?? "monolith";
-    return codeGeneratorAgent(state, emit, {
-      project_id: project.project_id,
-      project_title: project.project_title,
-      project_description: project.project_description,
-      tech_stack: project.cto_output.tech_stack,
-      implementation_plan: project.engineer_output.implementation_plan,
-      code_structure: project.engineer_output.code_structure,
-      wireframes: project.designer_output.wireframes,
-      design_system: project.designer_output.design_system,
-      dependencies: project.engineer_output.dependencies,
-      mode,
-    });
-  });
   graph.addNode("ceo_review",        (state: CompanyStateType) => ceoReview(state, emit));
   graph.addNode("finalize", (state: CompanyStateType) => {
     const proj = state.current_project;
@@ -255,9 +238,8 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addEdge("engineer", "designer");
   graph.addEdge("designer", "qa");
 
-  // QA → Code Generator → CEO Review → Finalize → END
-  graph.addEdge("qa", "code_generator");
-  graph.addEdge("code_generator", "ceo_review");
+  // QA → CEO Review → Finalize → END (no auto code-gen)
+  graph.addEdge("qa", "ceo_review");
   graph.addEdge("ceo_review", "finalize");
   graph.addEdge("finalize", END);
 

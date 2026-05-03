@@ -8,7 +8,8 @@ export type AgentName =
   | "qa"
   | "business_marketing"
   | "finalize"
-  | "code_generator";
+  | "code_generator"
+  | "design_generator";
 
 export type ProjectPhase =
   | "intake"
@@ -106,6 +107,12 @@ export interface CodeGenMetadata {
   zip_path: string;
 }
 
+export interface DesignGenMetadata {
+  generated_at: number;
+  file_count: number;
+  output_path: string;
+}
+
 export interface ProjectItem {
   project_id: string;
   project_title: string;
@@ -128,6 +135,7 @@ export interface ProjectItem {
   retry_count: number;
   failed_agent: string | null;
   generated_code: CodeGenMetadata | null;
+  design_gen: DesignGenMetadata | null;
   revision_notes: string[];
   token_usage: Record<string, { input_tokens: number; output_tokens: number }>;
   total_input_tokens: number;
@@ -149,7 +157,11 @@ export type WsMessage =
   | { type: "code_gen_start"; payload: { project_id: string } }
   | { type: "code_gen_done"; payload: { project_id: string; metadata: CodeGenMetadata } }
   | { type: "code_gen_error"; payload: { project_id: string; message: string } }
-  | { type: "code_gen_download_ready"; payload: { project_id: string; zip_url: string } };
+  | { type: "code_gen_download_ready"; payload: { project_id: string; zip_url: string } }
+  | { type: "design_gen_start"; payload: { project_id: string } }
+  | { type: "design_gen_done"; payload: { project_id: string; metadata: DesignGenMetadata } }
+  | { type: "design_gen_error"; payload: { project_id: string; message: string } }
+  | { type: "design_gen_download_ready"; payload: { project_id: string; output_path: string } };
 
 export type PhaseConfig = {
   label: string;
@@ -169,6 +181,7 @@ export const AGENT_CONFIG: Record<AgentName, PhaseConfig> = {
   designer:        { label: "Designer",         color: "#9B59B6", bg: "#2a1a3d", icon: "D",  desc: "UI/UX deliverables" },
   qa:              { label: "QA",               color: "#E67E22", bg: "#3d2a10", icon: "Q",  desc: "Test plan & quality gates" },
   code_generator: { label: "Code Generator",  color: "#7F77DD", bg: "#2a2645", icon: "⚡", desc: "Code generation" },
+  design_generator: { label: "Design Generator", color: "#9B59B6", bg: "#2a1a3d", icon: "🎨", desc: "Design generation" },
   finalize:        { label: "Selesai",           color: "#639922", bg: "#1e2e10", icon: "✓", desc: "Project delivered" },
 };
 

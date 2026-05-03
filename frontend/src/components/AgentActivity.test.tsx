@@ -124,6 +124,7 @@ describe("AgentActivity", () => {
       total_output_tokens: 0,
       total_tokens: 0,
       generated_code: null,
+      design_gen: null,
     };
     render(
       <AgentActivity

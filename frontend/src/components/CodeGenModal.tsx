@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { CodeGenMode } from "../models";
+import { CodeGenMode, ProjectItem } from "../models";
 
 interface Props {
-  projectId: string;
-  projectTitle: string;
+  project: ProjectItem;
   isGenerating: boolean;
   zipUrl: string | null;
   codeGenMode: CodeGenMode | null;
@@ -12,8 +11,7 @@ interface Props {
 }
 
 export function CodeGenModal({
-  projectId,
-  projectTitle,
+  project,
   isGenerating,
   zipUrl,
   codeGenMode,
@@ -21,6 +19,11 @@ export function CodeGenModal({
   onClose,
 }: Props) {
   const [mode, setMode] = useState<CodeGenMode>("monolith");
+
+  // Reconstruct download URL from stored zip_path if zipUrl not in memory
+  const downloadUrl = zipUrl ?? (project.generated_code?.zip_path
+        ? `http://localhost:3001/download/${project.project_id}`
+        : null);
 
   return (
     <div
@@ -51,7 +54,7 @@ export function CodeGenModal({
           ⚡ Generate Code
         </h2>
         <p style={{ fontSize: "12px", color: "#666680", marginBottom: "20px" }}>
-          {projectTitle}
+          {project.project_title}
         </p>
 
         {/* Mode toggle */}
@@ -79,7 +82,7 @@ export function CodeGenModal({
           ))}
         </div>
 
-        {isGenerating && !zipUrl && (
+        {isGenerating && !downloadUrl && (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <div className="spinner" style={{ margin: "0 auto 12px" }} />
             <p style={{ fontSize: "13px", color: "#9999b0" }}>
@@ -88,14 +91,15 @@ export function CodeGenModal({
           </div>
         )}
 
-        {zipUrl && (
+        {downloadUrl && (
           <div style={{ textAlign: "center", padding: "16px 0" }}>
             <div style={{ fontSize: "32px", marginBottom: "8px" }}>✓</div>
             <p style={{ fontSize: "13px", color: "#1D9E75", marginBottom: "16px" }}>
-              {codeGenMode} project ready — {mode} structure
+              {codeGenMode ?? mode} project ready — {mode} structure
+              {project.generated_code && ` (${project.generated_code.file_count} files)`}
             </p>
             <a
-              href={zipUrl}
+              href={downloadUrl}
               style={{
                 display: "inline-block",
                 background: "#7F77DD",
@@ -112,11 +116,11 @@ export function CodeGenModal({
           </div>
         )}
 
-        {!zipUrl && (
+        {!downloadUrl && (
           <button
             className="btn-primary"
             disabled={isGenerating}
-            onClick={() => onGenerate(projectId, mode)}
+            onClick={() => onGenerate(project.project_id, mode)}
             style={{
               width: "100%",
               justifyContent: "center",
@@ -141,7 +145,7 @@ export function CodeGenModal({
             cursor: "pointer",
           }}
         >
-          {zipUrl ? "Close" : "Cancel"}
+          {downloadUrl ? "Close" : "Cancel"}
         </button>
       </div>
     </div>

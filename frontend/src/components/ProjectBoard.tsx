@@ -25,12 +25,15 @@ interface Props {
   onApproveExecution: (id: string, approve: boolean, notes?: string) => void;
   onClear: () => void;
   onGenerateCode: (id: string) => void;
+  onGenerateDesign: (id: string) => void;
+  onViewDetail: (id: string) => void;
+  generatingProjectId: string | null;
 }
 
 export function ProjectBoard({
   projects, selectedId, onSelect,
   onStartPlanning, onStartExecution, onApprovePlanning, onApproveExecution, onClear,
-  onGenerateCode,
+  onGenerateCode, onGenerateDesign, onViewDetail, generatingProjectId,
 }: Props) {
   return (
     <div className="panel">
@@ -172,17 +175,24 @@ export function ProjectBoard({
               )}
 
               {/* Action buttons */}
-              {project.status === "accepted" && !project.planning_approved && (
-                <div style={{ marginTop: "10px" }}>
+              <div style={{ marginTop: "10px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, justifyContent: "center", background: "#222232", border: "1px solid #333348" }}
+                  onClick={(e) => { e.stopPropagation(); onViewDetail(project.project_id); }}
+                >
+                  View Detail
+                </button>
+                {project.status === "accepted" && !project.planning_approved && (
                   <button
                     className="btn-primary"
-                    style={{ width: "100%", justifyContent: "center", marginBottom: "6px" }}
+                    style={{ flex: 1, justifyContent: "center" }}
                     onClick={(e) => { e.stopPropagation(); onStartPlanning(project.project_id); }}
                   >
                     Review Planning
                   </button>
-                </div>
-              )}
+                )}
+              </div>
 
               {isPendingPlanning && (
                 <div style={{ marginTop: "10px", display: "flex", gap: "6px" }}>
@@ -218,9 +228,33 @@ export function ProjectBoard({
                 </div>
               )}
 
-              {project.current_phase === "delivered" && (
+              {project.current_phase === "execution" && project.designer_output && (
                 <div style={{ marginTop: "10px" }}>
-                  {project.generated_code ? (
+                  {generatingProjectId === project.project_id ? (
+                    <div style={{ padding: "8px 12px", background: "#2a1a3d", border: "1px solid #9B59B644", borderRadius: "8px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                      <span style={{ color: "#BB79D9", fontSize: "12px", fontWeight: 600 }}>Generating Design...</span>
+                    </div>
+                  ) : (
+                  <button
+                    className="btn-primary"
+                    style={{ width: "100%", justifyContent: "center", background: "#9B59B6" }}
+                    onClick={(e) => { e.stopPropagation(); onGenerateDesign(project.project_id); }}
+                  >
+                    Generate Design
+                  </button>
+                  )}
+                </div>
+              )}
+
+              {(project.current_phase === "review" || project.current_phase === "delivered") && (
+                <div style={{ marginTop: "10px" }}>
+                  {generatingProjectId === project.project_id ? (
+                    <div style={{ padding: "8px 12px", background: "#2a2645", border: "1px solid #7F77DD44", borderRadius: "8px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                      <span style={{ color: "#9B8FD9", fontSize: "12px", fontWeight: 600 }}>Generating...</span>
+                    </div>
+                  ) : project.generated_code ? (
                     <div style={{ display: "flex", gap: "6px", flexDirection: "column" }}>
                       <div style={{ padding: "8px 12px", background: "#1a3028", border: "1px solid #2a5040", borderRadius: "8px", textAlign: "center" }}>
                         <span style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px" }}>✓ {project.generated_code.file_count} files generated</span>

@@ -6,6 +6,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createReadStream, existsSync } from "fs";
 import path from "path";
 import { buildGraph } from "./graph.js";
+import { codeGeneratorAgent } from "./agents/code-generator.js";
+import { designGeneratorAgent } from "./agents/design-generator.js";
 import {
   CompanyStateType,
   ProjectItem,
@@ -48,6 +50,7 @@ function emptyProjectExtras() {
     retry_count: 0,
     failed_agent: null as string | null,
     generated_code: null as null,
+    design_gen: null as null,
     revision_notes: [] as string[],
     token_usage: {} as Record<string, { input_tokens: number; output_tokens: number }>,
     total_input_tokens: 0,
@@ -126,7 +129,7 @@ wss.on("connection", (ws) => {
         const graph = buildGraph(emit);
 
         try {
-          // Only run CEO intake (approve/reject), don't run full pipeline
+          // Only run CEO intake — stop after approval, let user trigger planning via "Generate Code"
           const result = await graph.invoke({
             raw_title: title,
             raw_description: description,
@@ -330,24 +333,45 @@ wss.on("connection", (ws) => {
         send(ws, { type: "error", payload: { message: "Project not found" } });
         return;
       }
-      if (project.current_phase !== "delivered") {
-        send(ws, { type: "error", payload: { message: "Project must be in delivered phase" } });
+      if (!["review", "delivered"].includes(project.current_phase)) {
+        send(ws, { type: "error", payload: { message: "Project must complete review phase first" } });
         return;
       }
 
       send(ws, { type: "code_gen_start", payload: { project_id: projectId } });
 
       const emit = (event: AgentEvent) => broadcast({ type: "agent_event", payload: event });
-      const graph = buildGraph(emit);
+
+      const projectWithCodePlaceholder: ProjectItem = {
+        ...project,
+        generated_code: { generated_at: Date.now(), mode: mode ?? "monolith", file_count: 0, zip_path: "" },
+        current_phase: "delivered" as const,
+        status: "done" as const,
+      };
+      projects.set(projectId, projectWithCodePlaceholder);
+
+      const state: CompanyStateType = {
+        raw_title: project.project_title,
+        raw_description: project.project_description,
+        current_project: projectWithCodePlaceholder,
+        agent_events: [],
+        next_phase: "delivered",
+      };
 
       try {
-        const result = await graph.invoke({
-          raw_title: project.project_title,
-          raw_description: project.project_description,
-          current_project: { ...project, generated_code: { generated_at: Date.now(), mode, file_count: 0, zip_path: "" } },
-          agent_events: [],
-          next_phase: "execution",
+        const result = await codeGeneratorAgent(state, emit, {
+          project_id: projectId,
+          project_title: project.project_title,
+          project_description: project.project_description,
+          tech_stack: project.cto_output?.tech_stack ?? [],
+          implementation_plan: project.engineer_output?.implementation_plan ?? [],
+          code_structure: project.engineer_output?.code_structure ?? "",
+          wireframes: project.designer_output?.wireframes ?? [],
+          design_system: project.designer_output?.design_system ?? "",
+          dependencies: project.engineer_output?.dependencies ?? [],
+          mode: mode ?? "monolith",
         });
+
         const updated = result.current_project;
         projects.set(projectId, updated);
         send(ws, { type: "code_gen_done", payload: { project_id: projectId, metadata: updated.generated_code! } });
@@ -356,6 +380,68 @@ wss.on("connection", (ws) => {
       } catch (err) {
         console.error("[CodeGen Error]", err);
         send(ws, { type: "code_gen_error", payload: { project_id: projectId, message: String(err) } });
+      }
+    }
+
+    if (msg.type === "generate_design") {
+      const { project_id: projectId, mode } = msg.payload as { project_id?: string; mode?: CodeGenMode };
+      if (!projectId) {
+        send(ws, { type: "error", payload: { message: "project_id required" } });
+        return;
+      }
+      const project = projects.get(projectId);
+      if (!project) {
+        send(ws, { type: "error", payload: { message: "Project not found" } });
+        return;
+      }
+      if (project.current_phase !== "execution") {
+        send(ws, { type: "error", payload: { message: "Project must be in execution phase" } });
+        return;
+      }
+      if (!project.designer_output?.wireframes?.length) {
+        send(ws, { type: "error", payload: { message: "No wireframes available — run designer first" } });
+        return;
+      }
+
+      send(ws, { type: "design_gen_start", payload: { project_id: projectId } });
+
+      const emit = (event: AgentEvent) => broadcast({ type: "agent_event", payload: event });
+
+      const projectWithPlaceholder: ProjectItem = {
+        ...project,
+        design_gen: { generated_at: Date.now(), file_count: 0, output_path: "" },
+      };
+      projects.set(projectId, projectWithPlaceholder);
+
+      const state: CompanyStateType = {
+        raw_title: project.project_title,
+        raw_description: project.project_description,
+        current_project: projectWithPlaceholder,
+        agent_events: [],
+        next_phase: "execution",
+      };
+
+      try {
+        const result = await designGeneratorAgent(state, emit, {
+            project_id: projectId,
+            project_title: project.project_title,
+            project_description: project.project_description,
+            wireframes: project.designer_output.wireframes,
+            design_system: project.designer_output.design_system,
+          }
+        );
+
+        const updated = {
+          ...result.current_project,
+          design_gen: (result.current_project as ProjectItem).design_gen,
+        };
+        projects.set(projectId, updated);
+        send(ws, { type: "design_gen_done", payload: { project_id: projectId, metadata: updated.design_gen! } });
+        send(ws, { type: "design_gen_download_ready", payload: { project_id: projectId, output_path: updated.design_gen!.output_path } });
+        broadcast({ type: "project_update", payload: { project: updated } }, ws);
+      } catch (err) {
+        console.error("[DesignGen Error]", err);
+        send(ws, { type: "design_gen_error", payload: { project_id: projectId, message: String(err) } });
       }
     }
     } catch (err) {

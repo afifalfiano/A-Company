@@ -15,7 +15,8 @@ export type AgentName =
   | "qa"
   | "business_marketing"
   | "finalize"
-  | "code_generator";
+  | "code_generator"
+  | "design_generator";
 
 export type ProjectPhase =
   | "intake"
@@ -140,6 +141,12 @@ export interface CodeGenMetadata {
   zip_path: string;
 }
 
+export interface DesignGenMetadata {
+  generated_at: number;
+  file_count: number;
+  output_path: string;
+}
+
 export interface ProjectItem {
   project_id: string;
   project_title: string;
@@ -166,6 +173,8 @@ export interface ProjectItem {
   failed_agent: string | null;
   // Code generation metadata
   generated_code: CodeGenMetadata | null;
+  // Design generation metadata
+  design_gen: DesignGenMetadata | null;
   // Revision notes from human
   revision_notes: string[];
   // Token usage tracking per agent (accumulated across retries)

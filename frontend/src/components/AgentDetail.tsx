@@ -101,6 +101,7 @@ export function AgentDetail({ agent, project, onClose }: Props) {
     ],
     finalize: [],
     code_generator: [],
+    design_generator: [],
   };
 
   const fields = outputs[agent] ?? [];

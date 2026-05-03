@@ -64,6 +64,7 @@ describe("Type definitions", () => {
       total_output_tokens: 0,
       total_tokens: 0,
       generated_code: null,
+      design_gen: null,
     };
     expect(project.project_id).toBe("test-123");
     expect(project.complexity).toBe("medium");
