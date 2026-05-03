@@ -1,18 +1,28 @@
 # A-Company
 
-Todo list yang diproses oleh 7 AI agents secara real-time via WebSocket.
+Real-time todo processing by 7 AI agents via WebSocket.
 
 ## Agents
 
-| Agent | Kategori | Tugas |
+| Agent | Category | Responsibility |
 |---|---|---|
-| CEO | semua | Analisa priority & delegasi ke agent yang tepat |
-| Engineer | technical | Breakdown subtasks + estimasi waktu |
-| Product | product | Acceptance criteria yang measurable |
-| Designer | design | Design deliverables & timeline |
-| Marketing | marketing | Marketing plan + KPI |
-| Bisnis | business | Business action plan + stakeholders |
-| Finalize | - | Wrap up semua output |
+| CEO | all | Analyzes priority & delegates to correct agents |
+| CTO | technical | Architecture & tech stack decisions |
+| Product Owner | product | User stories & backlog |
+| Product Manager | product | Strategy & roadmap |
+| Business & Marketing | business | Market analysis & KPIs |
+| Engineer | technical | Implementation plan & estimates |
+| Designer | design | UI/UX wireframes & deliverables |
+| QA | quality | Test plan & quality gates |
+| Finalize | — | Wrap up all outputs |
+
+## Pipeline Phases
+
+```
+intake → planning → execution → quality → review → delivered
+```
+
+Human-in-the-loop gates at **planning approval** and **execution approval**.
 
 ## Setup
 
@@ -21,10 +31,12 @@ Todo list yang diproses oleh 7 AI agents secara real-time via WebSocket.
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env dan isi MINIMAX_API_KEY
+# Edit .env and set OPENAI_API_KEY or ANTHROPIC_API_KEY
 npm install
 npm run dev
 ```
+
+Backend runs on **port 3001** with WebSocket at `ws://localhost:3001`.
 
 ### 2. Frontend
 
@@ -34,27 +46,33 @@ npm install
 npm run dev
 ```
 
-Buka http://localhost:5173
+Frontend runs on **http://localhost:5173**.
 
-## Cara Pakai
+## Usage
 
-1. Pastikan backend berjalan (WebSocket di port 3001)
-2. Buka frontend di browser
-3. Ketik todo atau klik salah satu contoh
-4. Lihat agent bekerja real-time di panel kiri
-5. Hasil lengkap muncul di panel kanan
+1. Ensure backend is running (WebSocket on port 3001)
+2. Open frontend in browser
+3. Enter a project title or click an example
+4. Watch agents work in real-time on the left panel
+5. Review full output in the project detail modal
+6. Approve/reject at planning and execution gates
 
-## Contoh Todo per Kategori
+## Workflow
 
-- **Technical**: "Implement login dengan JWT dan refresh token"
-- **Product**: "Design onboarding flow untuk new users"
-- **Design**: "Redesign dashboard halaman utama"
-- **Marketing**: "Buat kampanye Instagram untuk product launch"
-- **Business**: "Negotiate partnership dengan payment gateway lokal"
+1. **Submit project** → CEO decides accept/reject
+2. **Review Planning** → View CTO/PO/PM/BM outputs → Approve/Reject
+3. **Start Execution** → Engineer → Designer → QA run
+4. **Approve Execution** → Final review → Project delivered
+5. **Download PRD/TRD** → Export documentation from project detail modal
 
 ## Tech Stack
 
 - **Backend**: Node.js + Express + WebSocket (ws) + LangGraph.js
-- **Frontend**: React + Vite + TypeScript
-- **AI**: MiniMax via OpenAI-compatible endpoint
-# A-Company
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS
+- **AI**: OpenAI-compatible API (OpenAI, Anthropic, or MiniMax)
+
+## Documentation
+
+- [Backend Changelog](./backend/CHANGELOG.md)
+- [Frontend Changelog](./frontend/CHANGELOG.md)
+- [PRD/TRD Plan](./docs/superpowers/plans/2026-05-03-prd-trd-document-generator.md)
