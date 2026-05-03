@@ -42,7 +42,7 @@ const AGENT_COLOR: Record<string, string> = {
   finalize:           "#639922",
 };
 
-export function AgentActivity({ events, processing, activeAgent, project }: Props) {
+export function AgentActivity({ events, processing, activeAgent, project, onAgentClick }: Props) {
   const [selectedAgent, setSelectedAgent] = useState<AgentName | null>(null);
 
   // Derive latest event per agent for progress
@@ -63,6 +63,7 @@ export function AgentActivity({ events, processing, activeAgent, project }: Prop
   const handleAgentClick = (agent: AgentName) => {
     if (!project) return;
     setSelectedAgent(agent);
+    onAgentClick?.(agent);
   };
 
   const getProgress = (agent: string) => {
