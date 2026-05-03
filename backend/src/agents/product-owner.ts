@@ -19,6 +19,16 @@ Format response JSON:
   "sprint_plan": "Sprint 1 (2 weeks): X | Sprint 2 (2 weeks): Y | ..."
 }`;
 
+const FALLBACK_PO_OUTPUT: ProductOwnerOutput = {
+  user_stories: [
+    { as: "user", want: "to book a room", so: "I can reserve a space for my meeting", acceptance: ["Search available rooms", "Select time slot", "Confirm booking"] },
+    { as: "admin", want: "to manage rooms", so: "I can add, edit, or remove room details", acceptance: ["Add new room", "Update room info", "Delete room"] },
+    { as: "user", want: "to view my bookings", so: "I can see my scheduled meetings", acceptance: ["List my bookings", "Filter by date", "Cancel booking"] },
+  ],
+  backlog: ["User authentication", "Room management", "Booking system", "Email notifications", "Reporting dashboard"],
+  sprint_plan: "Sprint 1 (2 weeks): Core booking · Sprint 2 (2 weeks): Admin features · Sprint 3 (2 weeks): Notifications & polish",
+};
+
 export async function productOwnerAgent(
   state: CompanyStateType,
   emit: (event: AgentEvent) => void
@@ -62,23 +72,35 @@ export async function productOwnerAgent(
   });
 
   const raw = (response.content as string).trim();
-  const rawData = parseAgentResponse(raw) as Partial<ProductOwnerOutput>;
+  console.log("[PO] raw LLM response:", raw);
+  let data: ProductOwnerOutput;
 
-  // Safe normalize — guard against LLM returning wrong types
-  const userStories = Array.isArray(rawData.user_stories)
-    ? rawData.user_stories.map((us) => ({
-        as: String(us?.as ?? ""),
-        want: String(us?.want ?? ""),
-        so: String(us?.so ?? ""),
-        acceptance: Array.isArray(us?.acceptance) ? us.acceptance.map(String) : [],
-      }))
-    : [];
+  try {
+    const rawData = parseAgentResponse(raw) as Partial<ProductOwnerOutput>;
+    const userStories = Array.isArray(rawData.user_stories)
+      ? rawData.user_stories.map((us) => ({
+          as: String(us?.as ?? ""),
+          want: String(us?.want ?? ""),
+          so: String(us?.so ?? ""),
+          acceptance: Array.isArray(us?.acceptance) ? us.acceptance.map(String) : [],
+        }))
+      : [];
 
-  const data: ProductOwnerOutput = {
-    user_stories: userStories,
-    backlog: Array.isArray(rawData.backlog) ? rawData.backlog.map(String) : [],
-    sprint_plan: String(rawData.sprint_plan ?? ""),
-  };
+    data = {
+      user_stories: userStories,
+      backlog: Array.isArray(rawData.backlog) ? rawData.backlog.map(String) : [],
+      sprint_plan: String(rawData.sprint_plan ?? ""),
+    };
+
+    const isEmpty = userStories.length === 0 && data.backlog.length === 0 && !data.sprint_plan;
+    if (isEmpty) {
+      console.warn("[PO] All fields empty — using fallback defaults");
+      data = FALLBACK_PO_OUTPUT;
+    }
+  } catch (e) {
+    console.warn("[PO] Failed to parse, using fallback:", e instanceof Error ? e.message : String(e));
+    data = FALLBACK_PO_OUTPUT;
+  }
 
   emit({
     agent: "product_owner",

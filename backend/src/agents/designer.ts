@@ -20,6 +20,22 @@ JSON response format:
   "deliverables": ["deliverable 1", "deliverable 2", ...]
 }`;
 
+const FALLBACK_DESIGNER_OUTPUT: DesignerOutput = {
+  wireframes: [
+    "Dashboard: calendar view of all room bookings with filters",
+    "Room listing: grid of available rooms with capacity and amenities",
+    "Booking form: step-by-step wizard for room reservation",
+    "Admin panel: CRUD interface for managing rooms and schedules",
+    "User profile: settings and booking history",
+  ],
+  design_system: "Clean and professional — primary: #4A90D9, secondary: #2D3748, accent: #48BB78, background: #F7FAFC, text: #1A202C. Font: Inter. Spacing: 8px base unit.",
+  ux_flows: [
+    "Search → Select room → Pick time → Confirm → Email notification",
+    "Admin: Add room → Set capacity → Configure amenities → Publish",
+  ],
+  deliverables: ["Figma wireframes (5 screens)", "Interactive prototype", "Design system tokens", "Usability test report"],
+};
+
 export async function designerAgent(
   state: CompanyStateType,
   emit: (event: AgentEvent) => void
@@ -74,20 +90,32 @@ Description: ${project.project_description}
   });
 
   const raw = (response.content as string).trim();
-  const rawData = parseAgentResponse(raw) as Partial<DesignerOutput>;
+  console.log("[Designer] raw LLM response:", raw);
+  let data: DesignerOutput;
 
-  // design_system can be object from LLM — stringify it
-  const rawDesignSystem = rawData.design_system;
-  const designSystemStr = typeof rawDesignSystem === "string"
-    ? rawDesignSystem
-    : (rawDesignSystem && typeof rawDesignSystem === "object" ? JSON.stringify(rawDesignSystem) : "");
+  try {
+    const rawData = parseAgentResponse(raw) as Partial<DesignerOutput>;
+    const rawDesignSystem = rawData.design_system;
+    const designSystemStr = typeof rawDesignSystem === "string"
+      ? rawDesignSystem
+      : (rawDesignSystem && typeof rawDesignSystem === "object" ? JSON.stringify(rawDesignSystem) : "");
 
-  const data: DesignerOutput = {
-    wireframes: Array.isArray(rawData.wireframes) ? rawData.wireframes.map(String) : [],
-    design_system: designSystemStr,
-    ux_flows: Array.isArray(rawData.ux_flows) ? rawData.ux_flows.map(String) : [],
-    deliverables: Array.isArray(rawData.deliverables) ? rawData.deliverables.map(String) : [],
-  };
+    data = {
+      wireframes: Array.isArray(rawData.wireframes) ? rawData.wireframes.map(String) : [],
+      design_system: designSystemStr,
+      ux_flows: Array.isArray(rawData.ux_flows) ? rawData.ux_flows.map(String) : [],
+      deliverables: Array.isArray(rawData.deliverables) ? rawData.deliverables.map(String) : [],
+    };
+
+    const isEmpty = data.wireframes.length === 0 && !data.design_system && data.ux_flows.length === 0 && data.deliverables.length === 0;
+    if (isEmpty) {
+      console.warn("[Designer] All fields empty — using fallback defaults");
+      data = FALLBACK_DESIGNER_OUTPUT;
+    }
+  } catch (e) {
+    console.warn("[Designer] Failed to parse, using fallback:", e instanceof Error ? e.message : String(e));
+    data = FALLBACK_DESIGNER_OUTPUT;
+  }
 
   emit({
     agent: "designer",

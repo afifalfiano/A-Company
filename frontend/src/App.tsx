@@ -13,7 +13,7 @@ const EXAMPLE_PROJECTS = [
 ];
 
 export default function App() {
-  const { connected, events, projects, processing, activeAgent, sendProject, startPlanning, approvePlanning, approveExecution, clearProjects } =
+  const { connected, events, projects, processing, activeAgent, sendProject, startPlanning, startExecution, approvePlanning, approveExecution, clearProjects } =
     useWebSocket("ws://localhost:3001");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -92,14 +92,15 @@ export default function App() {
           project={selectedProject}
         />
         <ProjectBoard
-        projects={projects}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onStartPlanning={startPlanning}
-        onApprovePlanning={approvePlanning}
-        onApproveExecution={approveExecution}
-        onClear={clearProjects}
-      />
+          projects={projects}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onStartPlanning={startPlanning}
+          onStartExecution={startExecution}
+          onApprovePlanning={approvePlanning}
+          onApproveExecution={approveExecution}
+          onClear={clearProjects}
+        />
       </div>
 
       {selectedProject && (

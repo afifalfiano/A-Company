@@ -1,4 +1,5 @@
 import { ProjectItem, PHASE_COLORS, PRIORITY_COLORS } from "../models";
+import { generatePRD, generateTRD } from "../utils/documentGenerator";
 
 interface Props {
   project: ProjectItem;
@@ -90,13 +91,13 @@ export function ProjectDetail({ project, onClose }: Props) {
       <div style={{
         background: "#13131c", border: "1px solid #2a2a3a",
         borderRadius: "16px", width: "100%", maxWidth: "800px",
-        maxHeight: "85vh", overflow: "auto",
+        maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column",
       }}>
         {/* Header */}
         <div style={{
           padding: "20px 24px", borderBottom: "1px solid #2a2a3a",
           display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-          position: "sticky", top: 0, background: "#13131c", zIndex: 1,
+          background: "#13131c", zIndex: 1, flexShrink: 0,
         }}>
           <div>
             <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#e2e2e8", marginBottom: "4px" }}>
@@ -114,20 +115,62 @@ export function ProjectDetail({ project, onClose }: Props) {
               </span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "#222232", border: "1px solid #2a2a3a",
-              color: "#9999b0", borderRadius: "8px",
-              padding: "6px 12px", cursor: "pointer", fontSize: "12px",
-            }}
-          >
-            Close
-          </button>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <button
+              onClick={() => {
+                const blob = new Blob([generatePRD(project)], { type: "text/markdown" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${project.project_title.replace(/\s+/g, "-").toLowerCase()}-PRD.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              style={{
+                background: "#222232", border: "1px solid #2a2a3a",
+                color: "#EF9F27", borderRadius: "8px",
+                padding: "6px 12px", cursor: "pointer", fontSize: "12px",
+                display: "flex", alignItems: "center", gap: "4px",
+              }}
+              title="Download PRD"
+            >
+              📥 PRD
+            </button>
+            <button
+              onClick={() => {
+                const blob = new Blob([generateTRD(project)], { type: "text/markdown" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${project.project_title.replace(/\s+/g, "-").toLowerCase()}-TRD.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              style={{
+                background: "#222232", border: "1px solid #2a2a3a",
+                color: "#378ADD", borderRadius: "8px",
+                padding: "6px 12px", cursor: "pointer", fontSize: "12px",
+                display: "flex", alignItems: "center", gap: "4px",
+              }}
+              title="Download TRD"
+            >
+              📥 TRD
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: "#222232", border: "1px solid #2a2a3a",
+                color: "#9999b0", borderRadius: "8px",
+                padding: "6px 12px", cursor: "pointer", fontSize: "12px",
+              }}
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         {/* Body */}
-        <div style={{ padding: "24px" }}>
+        <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
           {project.project_description && (
             <Field label="Description" value={project.project_description} />
           )}

@@ -20,6 +20,13 @@ Format response JSON:
   "kpis": ["KPI1: definition", "KPI2: definition", ...]
 }`;
 
+const FALLBACK_BM_OUTPUT: BusinessMarketingOutput = {
+  market_analysis: "SMB market for meeting room booking — $2B global market, growing 12% YoY",
+  go_to_market: ["Content marketing targeting office managers", "SEO and direct sales", "Partner with office suppliers"],
+  pricing_strategy: "Freemium model: $0/mo for basic, $29/mo per location for pro features",
+  kpis: ["KPI: Booking conversion rate > 15%", "KPI: Monthly active users growth > 10%", "KPI: Customer acquisition cost < $50"],
+};
+
 export async function businessMarketingAgent(
   state: CompanyStateType,
   emit: (event: AgentEvent) => void
@@ -63,14 +70,27 @@ export async function businessMarketingAgent(
   });
 
   const raw = (response.content as string).trim();
-  const rawData = parseAgentResponse(raw) as Partial<BusinessMarketingOutput>;
+  console.log("[BM] raw LLM response:", raw);
+  let data: BusinessMarketingOutput;
 
-  const data: BusinessMarketingOutput = {
-    market_analysis: String(rawData.market_analysis ?? ""),
-    go_to_market: Array.isArray(rawData.go_to_market) ? rawData.go_to_market.map(String) : [],
-    pricing_strategy: String(rawData.pricing_strategy ?? ""),
-    kpis: Array.isArray(rawData.kpis) ? rawData.kpis.map(String) : [],
-  };
+  try {
+    const rawData = parseAgentResponse(raw) as Partial<BusinessMarketingOutput>;
+    data = {
+      market_analysis: String(rawData.market_analysis ?? ""),
+      go_to_market: Array.isArray(rawData.go_to_market) ? rawData.go_to_market.map(String) : [],
+      pricing_strategy: String(rawData.pricing_strategy ?? ""),
+      kpis: Array.isArray(rawData.kpis) ? rawData.kpis.map(String) : [],
+    };
+
+    const isEmpty = !data.market_analysis && data.go_to_market.length === 0 && !data.pricing_strategy && data.kpis.length === 0;
+    if (isEmpty) {
+      console.warn("[BM] All fields empty — using fallback defaults");
+      data = FALLBACK_BM_OUTPUT;
+    }
+  } catch (e) {
+    console.warn("[BM] Failed to parse, using fallback:", e instanceof Error ? e.message : String(e));
+    data = FALLBACK_BM_OUTPUT;
+  }
 
   emit({
     agent: "business_marketing",

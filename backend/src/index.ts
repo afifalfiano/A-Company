@@ -168,12 +168,16 @@ wss.on("connection", (ws) => {
         // Only reset planning_approved if we're still IN the planning phase
         // If we've moved past planning, preserve the approval so we don't rebuild the graph
         const shouldResetPlanning = project.current_phase === "planning";
+        // execution_approved: preserve existing value on replays (when current_phase !== "planning").
+        // Set to false ONLY on first planning run so human gate can block execution.
+        // After user approves, execution_approved stays true across graph re-runs.
+        const executionApproved = project.current_phase !== "planning" ? project.execution_approved : false;
         const updatedProject: ProjectItem = {
           ...project,
           current_phase: "planning",
           status: "in_progress",
           planning_approved: shouldResetPlanning ? false : project.planning_approved,
-          execution_approved: false,
+          execution_approved: executionApproved,
           is_running: true,
         };
         projects.set(projectId, updatedProject);
@@ -256,6 +260,59 @@ wss.on("connection", (ws) => {
       projects.set(projectId!, project);
       send(ws, { type: "project_update", payload: { project } });
       broadcast({ type: "project_update", payload: { project } }, ws);
+    }
+
+    if (msg.type === "start_execution") {
+      const projectId = msg.payload?.project_id;
+      if (!projectId) {
+        send(ws, { type: "error", payload: { message: "project_id required" } });
+        return;
+      }
+      const project = projects.get(projectId);
+      if (!project) {
+        send(ws, { type: "error", payload: { message: "Project not found" } });
+        return;
+      }
+      if (project.current_phase !== "planning" || !project.planning_approved) {
+        send(ws, { type: "error", payload: { message: "Planning must be approved first" } });
+        return;
+      }
+      if (project.is_running) {
+        send(ws, { type: "error", payload: { message: "Execution already in progress" } });
+        return;
+      }
+
+      const updatedProject: ProjectItem = {
+        ...project,
+        current_phase: "execution",
+        status: "in_progress",
+        execution_approved: false,
+        is_running: true,
+      };
+      projects.set(projectId, updatedProject);
+      send(ws, { type: "phase_start", payload: { project: updatedProject, phase: "execution" } });
+      broadcast({ type: "project_update", payload: { project: updatedProject } }, ws);
+
+      const emit = (event: AgentEvent) => broadcast({ type: "agent_event", payload: event });
+      const graph = buildGraph(emit);
+
+      try {
+        const result = await graph.invoke({
+          raw_title: updatedProject.project_title,
+          raw_description: updatedProject.project_description,
+          current_project: updatedProject,
+          agent_events: [],
+          next_phase: "execution",
+        });
+        projects.set(projectId, { ...result.current_project, is_running: false } as ProjectItem);
+        send(ws, { type: "processing_done", payload: { project: result.current_project } });
+        broadcast({ type: "project_update", payload: { project: result.current_project } }, ws);
+      } catch (err) {
+        console.error("[Graph Error]", err);
+        send(ws, { type: "error", payload: { message: String(err) } });
+        const proj = projects.get(projectId);
+        if (proj) projects.set(projectId, { ...proj, is_running: false });
+      }
     }
     } catch (err) {
       console.error("[WS Handler Error]", err);

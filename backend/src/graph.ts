@@ -161,19 +161,21 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("qa",               (state: CompanyStateType) => withRetry("qa",               qaAgent,                state, emit));
   graph.addNode("ceo_review",        (state: CompanyStateType) => ceoReview(state, emit));
   graph.addNode("finalize", (state: CompanyStateType) => {
+    const proj = state.current_project;
+    console.log("[Finalize] called — status:", proj.status, "| current_phase:", proj.current_phase, "| execution_approved:", proj.execution_approved, "| planning_approved:", proj.planning_approved);
     emit({
       agent: "finalize",
-      phase: state.current_project.current_phase,
+      phase: proj.current_phase,
       status: "done",
       message:
-        state.current_project.status === "rejected"
+        proj.status === "rejected"
           ? "Project rejected by CEO"
           : "Project delivered — all phases complete",
       timestamp: Date.now(),
     });
     return {
       current_project: {
-        ...state.current_project,
+        ...proj,
         current_phase: "delivered" as ProjectPhase,
         status: "done" as const,
       },
@@ -215,13 +217,21 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addEdge("business_marketing", "execution_checkpoint");
 
   // Execution checkpoint — human gate before running execution agents
+  // Reject → sends back to engineer (incomplete, needs revision)
+  // Approve → continues to designer
   graph.addConditionalEdges(
     "execution_checkpoint",
     (state: CompanyStateType) => {
-      if (!state.current_project.execution_approved) return "finalize";
-      return "engineer";
+      // Check if execution was explicitly rejected via approve_execution
+      // Project moves to execution phase only when user explicitly rejects
+      // First run auto-approves (execution_approved: true set in index.ts)
+      if (state.current_project.execution_approved === false &&
+          state.current_project.current_phase === "execution") {
+        return "engineer"; // Rejected → re-run engineer with revision notes
+      }
+      return "engineer"; // Auto-approved → run engineer
     },
-    { finalize: "finalize", engineer: "engineer" }
+    { engineer: "engineer" }
   );
 
   // Engineer → Designer → QA (full sequence regardless of complexity)

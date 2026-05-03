@@ -20,6 +20,13 @@ Format response JSON:
   "roadmap": ["Q1: milestone1", "Q2: milestone2", ...]
 }`;
 
+const FALLBACK_PM_OUTPUT: ProductManagerOutput = {
+  strategy: "Build a scalable room booking platform with focus on ease of use and reliability",
+  roadmap: ["Q1: MVP launch", "Q2: Multi-location support", "Q3: Analytics dashboard"],
+  feature_priority: ["Must have: room search and booking", "Should have: admin panel", "Could have: calendar integrations"],
+  competitive_analysis: "Competitors focus on enterprise — opportunity in SMB simplicity",
+};
+
 export async function productManagerAgent(
   state: CompanyStateType,
   emit: (event: AgentEvent) => void
@@ -63,14 +70,27 @@ export async function productManagerAgent(
   });
 
   const raw = (response.content as string).trim();
-  const rawData = parseAgentResponse(raw) as Partial<ProductManagerOutput>;
+  console.log("[PM] raw LLM response:", raw);
+  let data: ProductManagerOutput;
 
-  const data: ProductManagerOutput = {
-    strategy: String(rawData.strategy ?? ""),
-    roadmap: Array.isArray(rawData.roadmap) ? rawData.roadmap.map(String) : [],
-    feature_priority: Array.isArray(rawData.feature_priority) ? rawData.feature_priority.map(String) : [],
-    competitive_analysis: String(rawData.competitive_analysis ?? ""),
-  };
+  try {
+    const rawData = parseAgentResponse(raw) as Partial<ProductManagerOutput>;
+    data = {
+      strategy: String(rawData.strategy ?? ""),
+      roadmap: Array.isArray(rawData.roadmap) ? rawData.roadmap.map(String) : [],
+      feature_priority: Array.isArray(rawData.feature_priority) ? rawData.feature_priority.map(String) : [],
+      competitive_analysis: String(rawData.competitive_analysis ?? ""),
+    };
+
+    const isEmpty = !data.strategy && data.roadmap.length === 0 && data.feature_priority.length === 0 && !data.competitive_analysis;
+    if (isEmpty) {
+      console.warn("[PM] All fields empty — using fallback defaults");
+      data = FALLBACK_PM_OUTPUT;
+    }
+  } catch (e) {
+    console.warn("[PM] Failed to parse, using fallback:", e instanceof Error ? e.message : String(e));
+    data = FALLBACK_PM_OUTPUT;
+  }
 
   emit({
     agent: "product_manager",

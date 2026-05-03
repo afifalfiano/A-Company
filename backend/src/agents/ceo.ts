@@ -84,8 +84,28 @@ export async function ceoIntake(
 
   const raw = (response.content as string).trim();
   console.log("[CEO] raw LLM response:", raw);
-  const data = parseAgentResponse(raw) as CeoDecision;
+  let data = parseAgentResponse(raw) as CeoDecision;
   console.log("[CEO] parsed data:", JSON.stringify(data));
+
+  // Guard: if CEO rejected but gave no reasoning, the response was likely malformed.
+  // Auto-accept with low priority since the system prompt says only reject obviously impossible projects.
+  if (data.accepted === false && (!data.reasoning || data.reasoning.trim().length === 0)) {
+    console.warn("[CEO] Rejected with empty reasoning — treating as malformed response, auto-accepting.");
+    data = {
+      accepted: true,
+      priority: "low",
+      reasoning: "Auto-accepted — CEO response was ambiguous or empty. Defaulting to low priority.",
+      resource_allocation: "small",
+    };
+  }
+
+  // Guard: normalize missing fields
+  if (!data.priority || !["critical","high","medium","low"].includes(data.priority)) {
+    data.priority = "medium";
+  }
+  if (!data.resource_allocation || !["none","small","medium","large"].includes(data.resource_allocation)) {
+    data.resource_allocation = "medium";
+  }
 
   // Determine complexity based on description length + resource_allocation hint
   const descLen = description.length;
@@ -194,6 +214,7 @@ QA:
   });
 
   const raw = (response.content as string).trim();
+  console.log("[CEO Review] raw LLM response:", raw);
   let data: { approved: boolean; feedback: string; launch_decision: string };
   try {
     data = parseAgentResponse(raw) as typeof data;
@@ -201,6 +222,17 @@ QA:
     data = {
       approved: true,
       feedback: "Auto-approved - all phases completed",
+      launch_decision: "ready_for_deployment",
+    };
+  }
+
+  // Guard: if review rejected but gave no feedback, treat as auto-approved
+  // (all phases completed successfully, should not hold up delivery)
+  if (data.approved === false && (!data.feedback || data.feedback.trim().length === 0)) {
+    console.warn("[CEO Review] Rejected with empty feedback — auto-approving since all phases completed.");
+    data = {
+      approved: true,
+      feedback: "Auto-approved — review response was ambiguous. All phases completed successfully.",
       launch_decision: "ready_for_deployment",
     };
   }

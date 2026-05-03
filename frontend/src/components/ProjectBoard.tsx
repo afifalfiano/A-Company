@@ -20,6 +20,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onStartPlanning: (id: string) => void;
+  onStartExecution: (id: string) => void;
   onApprovePlanning: (id: string, approve: boolean, notes?: string) => void;
   onApproveExecution: (id: string, approve: boolean, notes?: string) => void;
   onClear: () => void;
@@ -27,7 +28,7 @@ interface Props {
 
 export function ProjectBoard({
   projects, selectedId, onSelect,
-  onStartPlanning, onApprovePlanning, onApproveExecution, onClear,
+  onStartPlanning, onStartExecution, onApprovePlanning, onApproveExecution, onClear,
 }: Props) {
   return (
     <div className="panel">
@@ -109,11 +110,18 @@ export function ProjectBoard({
               <div className="todo-id">#{project.project_id}</div>
 
               {/* CEO decision */}
-              {project.ceo_decision.reasoning && (
+              {project.ceo_decision && (
                 <div className="todo-section">
                   <div className="section-title">CEO Decision</div>
                   <ul>
-                    <li>{project.ceo_decision.reasoning.slice(0, 100)}{project.ceo_decision.reasoning.length > 100 ? "..." : ""}</li>
+                    <li>
+                      {project.ceo_decision.accepted ? (
+                        <span style={{ color: "#1D9E75" }}>Accepted</span>
+                      ) : (
+                        <span style={{ color: "#E24B4A" }}>Rejected</span>
+                      )}
+                      {project.ceo_decision.reasoning ? `: ${project.ceo_decision.reasoning.slice(0, 100)}${project.ceo_decision.reasoning.length > 100 ? "..." : ""}` : " — no reasoning provided"}
+                    </li>
                   </ul>
                 </div>
               )}
@@ -193,6 +201,24 @@ export function ProjectBoard({
                   >
                     ✗ Reject
                   </button>
+                </div>
+              )}
+
+              {project.planning_approved && project.current_phase === "planning" && (
+                <div style={{ marginTop: "10px" }}>
+                  <button
+                    className="btn-primary"
+                    style={{ width: "100%", justifyContent: "center", marginBottom: "6px" }}
+                    onClick={(e) => { e.stopPropagation(); onStartExecution(project.project_id); }}
+                  >
+                    ▶ Start Execution
+                  </button>
+                </div>
+              )}
+
+              {project.current_phase === "delivered" && (
+                <div style={{ marginTop: "10px", padding: "8px 12px", background: "#1a3028", border: "1px solid #2a5040", borderRadius: "8px", textAlign: "center" }}>
+                  <span style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px" }}>✓ Project Delivered</span>
                 </div>
               )}
 
