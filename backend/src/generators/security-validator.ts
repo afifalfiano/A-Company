@@ -27,17 +27,17 @@ export function validateFilePath(filePath: string, baseDir: string): ValidationR
 
   // Disallow hidden files (except allowlist)
   const basename = path.basename(filePath);
-  const allowHidden = [".gitignore", ".env.example", ".dockerignore", ".env"];
-  if (basename.startsWith(".") && !allowHidden.includes(basename)) {
+  const allowHidden = new Set([".gitignore", ".env.example", ".dockerignore", ".env"]);
+  if (basename.startsWith(".") && !allowHidden.has(basename)) {
     return { valid: false, errors: [`Hidden files not allowed: ${filePath}`] };
   }
 
-  // Check extension
+  // Check extension (skip for hidden allowlist files with no or non-standard ext)
   const ext = path.extname(filePath).toLowerCase();
   if (BLOCKED_EXTENSIONS.has(ext)) {
     return { valid: false, errors: [`Blocked extension: ${ext}`] };
   }
-  if (ext && !ALLOWED_EXTENSIONS.has(ext)) {
+  if (!allowHidden.has(basename) && ext && !ALLOWED_EXTENSIONS.has(ext)) {
     return { valid: false, errors: [`Extension not allowed: ${ext}`] };
   }
 
@@ -66,9 +66,9 @@ export function validateFileContent(
 
   // Basic suspicious pattern detection
   const suspicious = [
-    { pattern: /<script[^>]*>[\s\S]*?<\/script>/gi, name: "script tag" },
-    { pattern: /javascript:/gi, name: "javascript: protocol" },
-    { pattern: /data:text\/html/gi, name: "data:text/html" },
+    { pattern: /<script[^>]*>/i, name: "script tag" },
+    { pattern: /javascript:/i, name: "javascript: protocol" },
+    { pattern: /data:text\/html/i, name: "data:text/html" },
   ];
 
   for (const { pattern, name } of suspicious) {

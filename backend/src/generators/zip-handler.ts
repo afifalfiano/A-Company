@@ -17,9 +17,9 @@ export async function createZipArchive(
   const output = createWriteStream(zipPath);
   const archive = archiver("zip", { zlib: { level: 9 } });
 
-  // Collect archive finish event
-  const finishPromise = new Promise<void>((resolve, reject) => {
-    archive.on("finish", () => resolve());
+  // Wait for archive to be fully written and closed
+  const closePromise = new Promise<void>((resolve, reject) => {
+    archive.on("close", () => resolve());
     archive.on("error", (err: Error) => reject(err));
   });
 
@@ -31,7 +31,7 @@ export async function createZipArchive(
   }
 
   archive.finalize();
-  await finishPromise;
+  await closePromise;
 
   return zipPath;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { CeoDecision } from "../../state.js";
+import type { CeoDecision } from "../state.js";
 
 describe("CEO decision acceptance criteria", () => {
   it("accepts basic todo list project", () => {

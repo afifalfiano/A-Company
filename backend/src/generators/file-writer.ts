@@ -18,6 +18,14 @@ export async function writeProjectFiles(
   // Ensure project directory exists
   await fs.mkdir(projectDir, { recursive: true });
 
+  // Collect all unique parent directories and write files in parallel
+  const parents = new Set(
+    files.map(({ path: filePath }) => path.dirname(filePath)).filter((d) => d !== ".")
+  );
+  await Promise.all(
+    [...parents].map((dir) => fs.mkdir(path.join(projectDir, dir), { recursive: true }))
+  );
+
   // Write all files in parallel
   await Promise.all(
     files.map(({ path: filePath, content }) =>
