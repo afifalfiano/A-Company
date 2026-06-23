@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { Annotation } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -35,28 +34,13 @@ export interface AgentTokenUsage {
   timestamp?: number;
 }
 
-// ─── LLM Provider Config ───────────────────────────────────────────────────────
-
-type LLMProvider = "openai" | "anthropic";
-
-function getLLMProvider(): LLMProvider {
-  return (process.env.LLM_PROVIDER as LLMProvider) ?? "openai";
-}
+// ─── LLM Config ────────────────────────────────────────────────────────────────
 
 export function getModel(temperature = 0.3) {
-  const provider = getLLMProvider();
-  if (provider === "anthropic") {
-    return new ChatAnthropic({
-      model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514",
-      temperature,
-      maxTokens: 4096,
-    });
-  }
-  return new ChatOpenAI({
-    configuration: { baseURL: process.env.OPENAI_BASE_URL },
-    apiKey: process.env.OPENAI_API_KEY,
-    model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+  return new ChatAnthropic({
+    model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
     temperature,
+    maxTokens: 4096,
   });
 }
 

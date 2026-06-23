@@ -14,7 +14,6 @@
     "@langchain/anthropic": "^0.3.34",
     "@langchain/core": "^0.3.80",
     "@langchain/langgraph": "^0.2.0",
-    "@langchain/openai": "^0.3.0",
     "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
