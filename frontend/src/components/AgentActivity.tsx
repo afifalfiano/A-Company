@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AgentEvent, AgentName, ProjectItem } from "../models";
 import { AgentActivityDetail } from "./AgentActivityDetail";
+import { OfficeCanvas } from "./OfficeCanvas";
 
 const STATUS_ICON: Record<string, string> = {
   started:    "▶",
@@ -44,6 +45,7 @@ const AGENT_COLOR: Record<string, string> = {
 
 export function AgentActivity({ events, processing, activeAgent, project, onAgentClick }: Props) {
   const [selectedAgent, setSelectedAgent] = useState<AgentName | null>(null);
+  const [view, setView] = useState<'office' | 'log'>('office');
 
   // Derive latest event per agent for progress
   const latestPerAgent = events.reduce<Record<string, AgentEvent>>((acc, ev) => {
@@ -79,12 +81,37 @@ export function AgentActivity({ events, processing, activeAgent, project, onAgen
   };
   return (
     <div className="panel">
-      <div className="panel-header">
-        <h2>Agent Activity</h2>
-        {processing && <span className="spinner" />}
+      <div className="panel-header" style={{ flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h2 style={{ flex: 1 }}>Agent Activity</h2>
+          {processing && <span className="spinner" />}
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['office', 'log'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                flex: 1, padding: '4px 0', fontSize: 11,
+                fontFamily: 'monospace',
+                background: view === v ? '#7F77DD' : '#1a1a2e',
+                color: view === v ? '#fff' : '#666',
+                border: '1px solid #2a2a4a', borderRadius: 4, cursor: 'pointer',
+              }}
+            >
+              {v === 'office' ? '🏢 Office' : '📋 Log'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {tokenSummary.input > 0 && (
+      {view === 'office' && (
+        <div style={{ height: 500, margin: '8px 0', borderRadius: 6, overflow: 'hidden', border: '1px solid #1a1a3a' }}>
+          <OfficeCanvas events={events} activeAgent={activeAgent} />
+        </div>
+      )}
+
+      {view === 'log' && tokenSummary.input > 0 && (
         <div style={{
           fontSize: "11px",
           color: "#EF9F27",
@@ -100,7 +127,7 @@ export function AgentActivity({ events, processing, activeAgent, project, onAgen
         </div>
       )}
 
-      <div className="agent-roster">
+      {view === 'log' && <div className="agent-roster">
         {Object.entries(AGENT_SHORT).map(([key, icon]) => {
           const ev = latestPerAgent[key];
           const isActive = activeAgent === key;
@@ -136,14 +163,14 @@ export function AgentActivity({ events, processing, activeAgent, project, onAgen
             </div>
           );
         })}
-      </div>
+      </div>}
 
-      <div className="divider" />
+      {view === 'log' && <div className="divider" />}
 
-      {events.length === 0 && !processing && (
+      {view === 'log' && events.length === 0 && !processing && (
         <p className="empty">No activity yet. Submit a project to get started!</p>
       )}
-      <div className="event-list">
+      {view === 'log' && <div className="event-list">
         {events.map((ev, i) => {
           const color = AGENT_COLOR[ev.agent] ?? "#666";
           return (
@@ -169,7 +196,7 @@ export function AgentActivity({ events, processing, activeAgent, project, onAgen
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {selectedAgent && project && (
         <AgentActivityDetail

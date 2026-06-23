@@ -27,7 +27,7 @@
 - Create: `frontend/src/components/OfficeEngine.ts`
 - Create: `frontend/src/components/OfficeEngine.test.ts`
 
-- [ ] **Step 1: Create `OfficeEngine.test.ts` with type-shape test**
+- [x] **Step 1: Create `OfficeEngine.test.ts` with type-shape test**
 
 ```typescript
 // frontend/src/components/OfficeEngine.test.ts
@@ -99,17 +99,17 @@ export interface OfficeState {
 
 // Normalized desk positions [0,1] — canvas component scales to actual px
 export const DESK_POS: Record<string, { x: number; y: number }> = {
-  ceo:                { x: 0.10, y: 0.50 },
-  cto:                { x: 0.22, y: 0.50 },
-  product_manager:    { x: 0.58, y: 0.50 },
-  product_owner:      { x: 0.70, y: 0.50 },
-  business_marketing: { x: 0.82, y: 0.50 },
-  engineer:           { x: 0.37, y: 0.80 },
-  designer:           { x: 0.50, y: 0.80 },
-  qa:                 { x: 0.63, y: 0.80 },
-  finalize:           { x: 0.63, y: 0.80 },
-  code_generator:     { x: 0.37, y: 0.80 },
-  design_generator:   { x: 0.50, y: 0.80 },
+  ceo:                { x: 0.08, y: 0.38 },
+  cto:                { x: 0.22, y: 0.38 },
+  product_manager:    { x: 0.60, y: 0.38 },
+  product_owner:      { x: 0.76, y: 0.38 },
+  business_marketing: { x: 0.92, y: 0.38 },
+  engineer:           { x: 0.17, y: 0.85 },
+  designer:           { x: 0.50, y: 0.85 },
+  qa:                 { x: 0.83, y: 0.85 },
+  finalize:           { x: 0.83, y: 0.85 },
+  code_generator:     { x: 0.17, y: 0.85 },
+  design_generator:   { x: 0.50, y: 0.85 },
 };
 ```
 
@@ -389,7 +389,7 @@ interface Props {
 // ─── Draw: Background ────────────────────────────────────────────────────────
 
 function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: number): void {
-  const floorY = H * 0.58;
+  const floorY = H * 0.44;
 
   // Wall
   ctx.fillStyle = '#101020';
@@ -434,35 +434,37 @@ function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: number): vo
 }
 
 function drawMeetingRoom(ctx: CanvasRenderingContext2D, W: number, H: number): void {
-  const cx = W * 0.5;
-  const cy = H * 0.68;
-  const mw = Math.min(W * 0.28, 200);
-  const mh = 90;
+  const cx = W * 0.41;
+  const cy = H * 0.49;
+  const mw = Math.min(W * 0.16, 110);
+  const mh = 68;
 
-  // Border
+  // Room panel
   ctx.fillStyle = '#2a2860';
   ctx.fillRect(cx - mw / 2 - 2, cy - 2, mw + 4, mh + 4);
-  // Interior
   ctx.fillStyle = '#0d0b20';
   ctx.fillRect(cx - mw / 2, cy, mw, mh);
-  // Table
+
+  // Table surface (70% of room width)
+  const tw = mw * 0.70;
   ctx.fillStyle = '#181560';
-  ctx.fillRect(cx - mw * 0.44, cy + mh / 2 - 10, mw * 0.88, 20);
+  ctx.fillRect(cx - tw / 2, cy + mh / 2 - 7, tw, 14);
   ctx.fillStyle = '#0f0d30';
-  ctx.fillRect(cx - mw * 0.42, cy + mh / 2 - 8, mw * 0.84, 16);
-  // Chairs (3 top, 3 bottom)
+  ctx.fillRect(cx - tw / 2 + 2, cy + mh / 2 - 5, tw - 4, 10);
+
+  // Chairs at table edge (3 pairs)
   ctx.fillStyle = '#22205a';
   [-1, 0, 1].forEach(i => {
-    const cx2 = cx + i * mw * 0.28;
-    ctx.fillRect(cx2 - 9, cy + mh / 2 - 24, 18, 9);
-    ctx.fillRect(cx2 - 9, cy + mh / 2 + 15, 18, 9);
+    const cx2 = cx + i * tw * 0.32;
+    ctx.fillRect(cx2 - 5, cy + mh / 2 - 16, 10, 6);
+    ctx.fillRect(cx2 - 5, cy + mh / 2 + 10, 10, 6);
   });
-  // Label
-  ctx.font = 'bold 8px monospace';
+
+  ctx.font = 'bold 7px monospace';
   ctx.fillStyle = '#3a3090';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('MEETING ROOM', cx, cy + 10);
+  ctx.fillText('MEETING', cx, cy + 6);
 }
 ```
 
@@ -757,34 +759,35 @@ function drawWalker(
 
 // ─── Draw: Main orchestrator ──────────────────────────────────────────────────
 
+const DISPLAY_AGENTS: AgentName[] = [
+  'ceo','cto','product_manager','product_owner','business_marketing',
+  'engineer','designer','qa',
+];
+
 function draw(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
   state: OfficeState,
   timestamp: number,
 ): void {
-  const agentKeys = Object.keys(DESK_POS) as AgentName[];
-
   drawBackground(ctx, W, H);
   drawMeetingRoom(ctx, W, H);
 
-  // Draw desks + seated agents
-  for (const agentId of agentKeys) {
+  // Desks + seated agents (skip ghost agents sharing positions)
+  for (const agentId of DISPLAY_AGENTS) {
     const pos = DESK_POS[agentId];
     const agentState = state.agents[agentId];
     if (!pos || !agentState) continue;
-
     const ax = pos.x * W;
     const ay = pos.y * H;
     const config = AGENT_CONFIG[agentId];
     const color = config?.color ?? '#888';
     const label = config?.label ?? agentId;
-
     drawDesk(ctx, ax, ay, color, label, agentState.state, timestamp);
     drawPerson(ctx, ax, ay - 50, color, agentState.state, timestamp, agentState.idlePhase);
   }
 
-  // Draw walkers on top
+  // Walkers on top
   for (const walker of state.walkers) {
     drawWalker(ctx, walker, W, H, timestamp);
   }
@@ -982,7 +985,7 @@ Replace with:
 After the closing `</div>` of the new `panel-header`, add the office canvas (before the token summary div):
 ```tsx
 {view === 'office' && (
-  <div style={{ height: 340, margin: '8px 0', borderRadius: 6, overflow: 'hidden', border: '1px solid #1a1a3a' }}>
+  <div style={{ height: 500, margin: '8px 0', borderRadius: 6, overflow: 'hidden', border: '1px solid #1a1a3a' }}>
     <OfficeCanvas events={events} activeAgent={activeAgent} />
   </div>
 )}

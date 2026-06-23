@@ -5,6 +5,10 @@ import { AgentEvent, AgentName } from "../models";
 
 const noop = () => {};
 
+const switchToLog = () => {
+  fireEvent.click(screen.getByText('📋 Log'));
+};
+
 const makeEvent = (overrides: Partial<AgentEvent> = {}): AgentEvent => ({
   agent: "ceo",
   phase: "intake",
@@ -25,6 +29,7 @@ describe("AgentActivity", () => {
         onAgentClick={noop}
       />
     );
+    switchToLog();
     expect(screen.getByText(/no activity yet/i)).toBeInTheDocument();
   });
 
@@ -51,6 +56,7 @@ describe("AgentActivity", () => {
         onAgentClick={noop}
       />
     );
+    switchToLog();
     expect(screen.getByText(/^ceo$/)).toBeInTheDocument();
     expect(screen.getByText(/^product owner$/)).toBeInTheDocument();
     expect(screen.getByText(/^product manager$/)).toBeInTheDocument();
@@ -70,6 +76,7 @@ describe("AgentActivity", () => {
         onAgentClick={noop}
       />
     );
+    switchToLog();
     expect(screen.getByText("CEO finished intake")).toBeInTheDocument();
     expect(screen.getByText("CTO is thinking")).toBeInTheDocument();
   });
@@ -87,6 +94,7 @@ describe("AgentActivity", () => {
         onAgentClick={noop}
       />
     );
+    switchToLog();
     expect(screen.getByText(/tokens:/i)).toBeInTheDocument();
     expect(screen.getByText(/1,000 in/i)).toBeInTheDocument();
     expect(screen.getByText(/500 out/i)).toBeInTheDocument();
@@ -135,6 +143,7 @@ describe("AgentActivity", () => {
         onAgentClick={mockClick}
       />
     );
+    switchToLog();
     const rosterItem = screen.getByTitle("View designer output");
     fireEvent.click(rosterItem);
     expect(mockClick).toHaveBeenCalledWith("designer");

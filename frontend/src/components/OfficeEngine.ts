@@ -26,17 +26,17 @@ export interface OfficeState {
 
 // Normalized desk positions [0,1] — canvas component scales to px
 export const DESK_POS: Record<string, { x: number; y: number }> = {
-  ceo:                { x: 0.10, y: 0.50 },
-  cto:                { x: 0.22, y: 0.50 },
-  product_manager:    { x: 0.58, y: 0.50 },
-  product_owner:      { x: 0.70, y: 0.50 },
-  business_marketing: { x: 0.82, y: 0.50 },
-  engineer:           { x: 0.37, y: 0.80 },
-  designer:           { x: 0.50, y: 0.80 },
-  qa:                 { x: 0.63, y: 0.80 },
-  finalize:           { x: 0.63, y: 0.80 },
-  code_generator:     { x: 0.37, y: 0.80 },
-  design_generator:   { x: 0.50, y: 0.80 },
+  ceo:                { x: 0.06, y: 0.38 },
+  cto:                { x: 0.20, y: 0.38 },
+  product_manager:    { x: 0.66, y: 0.38 },
+  product_owner:      { x: 0.79, y: 0.38 },
+  business_marketing: { x: 0.92, y: 0.38 },
+  engineer:           { x: 0.17, y: 0.85 },
+  designer:           { x: 0.50, y: 0.85 },
+  qa:                 { x: 0.83, y: 0.85 },
+  finalize:           { x: 0.83, y: 0.85 },
+  code_generator:     { x: 0.17, y: 0.85 },
+  design_generator:   { x: 0.50, y: 0.85 },
 };
 
 const ALL_OFFICE_AGENTS: AgentName[] = [
