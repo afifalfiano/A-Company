@@ -98,7 +98,6 @@ Mode: ${mode}`;
   });
 
   const raw = (response.content as string).trim();
-  console.log("[CodeGenerator] raw LLM response length:", raw.length);
 
   let files: Array<{ path: string; content: string }>;
   try {

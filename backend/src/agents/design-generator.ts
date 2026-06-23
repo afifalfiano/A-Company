@@ -75,7 +75,6 @@ Design System: ${design_system}`;
   });
 
   const raw = (response.content as string).trim();
-  console.log("[DesignGenerator] raw LLM response length:", raw.length);
 
   let files: Array<{ path: string; content: string }>;
   try {

@@ -79,7 +79,6 @@ export async function productManagerAgent(
   });
 
   const raw = (response.content as string).trim();
-  console.log("[PM] raw LLM response:", raw);
   let data: ProductManagerOutput;
 
   try {

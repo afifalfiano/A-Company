@@ -104,7 +104,6 @@ Description: ${project.project_description}
   });
 
   const raw = (response.content as string).trim();
-  console.log("[Engineer] raw LLM response:", raw);
   let data: EngineerOutput;
 
   try {

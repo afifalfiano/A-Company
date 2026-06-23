@@ -70,7 +70,6 @@ export async function ctoAgent(
   });
 
   const raw = (response.content as string).trim();
-  console.log("[CTO] raw LLM response:", raw);
   let data: CtoOutput;
 
   try {

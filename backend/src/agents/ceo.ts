@@ -83,9 +83,7 @@ export async function ceoIntake(
   });
 
   const raw = (response.content as string).trim();
-  console.log("[CEO] raw LLM response:", raw);
   let data = parseAgentResponse(raw) as CeoDecision;
-  console.log("[CEO] parsed data:", JSON.stringify(data));
 
   // Guard: if CEO rejected but gave no reasoning, the response was likely malformed.
   // Auto-accept with low priority since the system prompt says only reject obviously impossible projects.

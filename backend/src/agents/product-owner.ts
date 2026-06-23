@@ -72,7 +72,6 @@ export async function productOwnerAgent(
   });
 
   const raw = (response.content as string).trim();
-  console.log("[PO] raw LLM response:", raw);
   let data: ProductOwnerOutput;
 
   try {

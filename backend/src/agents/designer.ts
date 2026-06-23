@@ -90,7 +90,6 @@ Description: ${project.project_description}
   });
 
   const raw = (response.content as string).trim();
-  console.log("[Designer] raw LLM response:", raw);
   let data: DesignerOutput;
 
   try {

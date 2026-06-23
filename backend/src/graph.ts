@@ -126,14 +126,6 @@ function executionCheckpointNode(
   return { agent_events: [] };
 }
 
-// ─── Routers ─────────────────────────────────────────────────────────────────
-
-function planningRouter(state: CompanyStateType) {
-  const c = state.current_project.complexity;
-  if (c === "low") return "cto"; // Low complexity: CTO + PO only, skip PM and BM
-  return "cto";
-}
-
 // ─── Graph ────────────────────────────────────────────────────────────────────
 
 export function buildGraph(emit: (event: AgentEvent) => void) {
@@ -170,7 +162,6 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("ceo_review",        (state: CompanyStateType) => deterministicReview(state, emit));
   graph.addNode("finalize", (state: CompanyStateType) => {
     const proj = state.current_project;
-    console.log("[Finalize] called — status:", proj.status, "| current_phase:", proj.current_phase, "| execution_approved:", proj.execution_approved, "| planning_approved:", proj.planning_approved);
     emit({
       agent: "finalize",
       phase: proj.current_phase,
@@ -211,9 +202,8 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addConditionalEdges(
     "planning_checkpoint",
     (state: CompanyStateType) => {
-      // Only finalize rejected projects here — accepted projects proceed to planning agents
       if (state.current_project.status === "rejected") return "finalize";
-      return planningRouter(state);
+      return "cto";
     },
     { finalize: "finalize", cto: "cto" }
   );

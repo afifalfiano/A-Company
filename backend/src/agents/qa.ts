@@ -109,7 +109,6 @@ ${codeSection}
   });
 
   const raw = (response.content as string).trim();
-  console.log("[QA] raw LLM response:", raw);
   let data: QaOutput;
 
   try {

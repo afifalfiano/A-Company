@@ -281,8 +281,6 @@ export function useWebSocket(url: string) {
     }));
   }, []);
 
-  const clearZipUrl = useCallback(() => setZipUrl(null), []);
-
   const clearProjects = useCallback(() => setProjects([]), []);
 
   return {
@@ -301,7 +299,6 @@ export function useWebSocket(url: string) {
     startExecution,
     startCodeGeneration,
     generateDesign,
-    clearZipUrl,
     approvePlanning,
     approveExecution,
     clearProjects,

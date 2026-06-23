@@ -79,7 +79,6 @@ export async function businessMarketingAgent(
   });
 
   const raw = (response.content as string).trim();
-  console.log("[BM] raw LLM response:", raw);
   let data: BusinessMarketingOutput;
 
   try {
