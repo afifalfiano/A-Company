@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, CeoDecision, ProjectPhase } from "../state.js";
+import { CompanyStateType, AgentEvent, CeoDecision, ProjectPhase, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -40,7 +40,7 @@ export async function ceoIntake(
   // Skip if project already accepted via start_planning
   if (state.current_project.status === "accepted") {
     return {
-      current_project: state.current_project,
+      current_project: {} as ProjectItem,
       agent_events: [],
     };
   }
@@ -126,11 +126,10 @@ export async function ceoIntake(
 
   return {
     current_project: {
-      ...state.current_project,
       status: data.accepted ? "accepted" : "rejected",
       complexity,
       ceo_decision: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "ceo" as const,

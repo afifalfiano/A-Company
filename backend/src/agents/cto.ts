@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, CtoOutput } from "../state.js";
+import { CompanyStateType, AgentEvent, CtoOutput, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -108,9 +108,8 @@ export async function ctoAgent(
 
   return {
     current_project: {
-      ...state.current_project,
       cto_output: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "cto" as const,

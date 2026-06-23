@@ -1,5 +1,5 @@
 import { StateGraph, END, START } from "@langchain/langgraph";
-import { CompanyState, CompanyStateType, AgentEvent, ProjectPhase } from "./state.js";
+import { CompanyState, CompanyStateType, AgentEvent, ProjectPhase, ProjectItem } from "./state.js";
 import { ceoIntake, ceoReview } from "./agents/ceo.js";
 import { ctoAgent } from "./agents/cto.js";
 import { productOwnerAgent } from "./agents/product-owner.js";
@@ -44,18 +44,17 @@ async function withRetry(
         totalOutput += tu.output_tokens;
       }
 
-      // Clear failed_agent on success
       return {
         ...result,
-        current_project: result.current_project ? {
-          ...result.current_project,
+        current_project: {
+          ...(result.current_project ?? {}),
           retry_count: 0,
           failed_agent: null,
           token_usage: currentUsage,
           total_input_tokens: totalInput,
           total_output_tokens: totalOutput,
           total_tokens: totalInput + totalOutput,
-        } : undefined,
+        } as ProjectItem,
       };
     } catch (err) {
       lastError = err;
@@ -78,20 +77,15 @@ async function withRetry(
     message: `Failed after ${MAX_RETRIES} retries: ${String(lastError).slice(0, 80)}`,
     timestamp: Date.now(),
   });
-  // All retries exhausted — preserve accumulated token usage
-  const accumulatedUsage = state.current_project.token_usage ?? {};
-  let totalIn = state.current_project.total_input_tokens ?? 0;
-  let totalOut = state.current_project.total_output_tokens ?? 0;
   return {
     current_project: {
-      ...state.current_project,
-      retry_count: state.current_project.retry_count + 1,
+      retry_count: (state.current_project.retry_count ?? 0) + 1,
       failed_agent: agentName,
-      token_usage: accumulatedUsage,
-      total_input_tokens: totalIn,
-      total_output_tokens: totalOut,
-      total_tokens: totalIn + totalOut,
-    },
+      token_usage: state.current_project.token_usage ?? {},
+      total_input_tokens: state.current_project.total_input_tokens ?? 0,
+      total_output_tokens: state.current_project.total_output_tokens ?? 0,
+      total_tokens: state.current_project.total_tokens ?? 0,
+    } as ProjectItem,
   };
 }
 

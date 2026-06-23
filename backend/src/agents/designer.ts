@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, DesignerOutput } from "../state.js";
+import { CompanyStateType, AgentEvent, DesignerOutput, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -127,9 +127,8 @@ Description: ${project.project_description}
 
   return {
     current_project: {
-      ...state.current_project,
       designer_output: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "designer" as const,

@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, ProductOwnerOutput } from "../state.js";
+import { CompanyStateType, AgentEvent, ProductOwnerOutput, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -112,9 +112,8 @@ export async function productOwnerAgent(
 
   return {
     current_project: {
-      ...state.current_project,
       product_owner_output: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "product_owner" as const,
