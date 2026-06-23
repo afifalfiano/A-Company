@@ -183,22 +183,30 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
 
   // ── Edges ───────────────────────────────────────────────────────────────────
 
-  // START → ceo_intake
-  graph.addEdge(START, "ceo_intake");
+  // START → phase_router: dispatch based on next_phase to avoid re-running phases
+  graph.addNode("phase_router", (_state: CompanyStateType) => ({}));
+  graph.addEdge(START, "phase_router");
+  graph.addConditionalEdges(
+    "phase_router",
+    (state: CompanyStateType) => {
+      if (state.next_phase === "execution") return "execution_router"; // skip planning entirely
+      if (state.next_phase === "planning") return "planning_checkpoint"; // CEO already ran inline
+      return "ceo_intake"; // fallback (intake-only invocations)
+    },
+    { execution_router: "execution_router", planning_checkpoint: "planning_checkpoint", ceo_intake: "ceo_intake" }
+  );
 
-  // CEO intake → stop or go to planning
+  // CEO intake → planning checkpoint or finalize
   graph.addConditionalEdges(
     "ceo_intake",
     (state: CompanyStateType) => {
       if (state.current_project.status === "rejected") return "finalize";
-      if (state.next_phase === "intake") return "finalize";
       return "planning_checkpoint";
     },
     { finalize: "finalize", planning_checkpoint: "planning_checkpoint" }
   );
 
-  // Planning checkpoint — human gate: only block if project was rejected by CEO
-  // If CEO accepted, always let through (planning_approved starts false but that's a pending gate)
+  // Planning checkpoint → CTO (or finalize if rejected)
   graph.addConditionalEdges(
     "planning_checkpoint",
     (state: CompanyStateType) => {
@@ -218,11 +226,11 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addEdge("product_manager", "execution_checkpoint");
   graph.addEdge("business_marketing", "execution_checkpoint");
 
-  // execution_checkpoint → execution_router → [engineer || designer] in parallel
+  // execution_checkpoint: stop after planning phase, or continue to execution
   graph.addConditionalEdges(
     "execution_checkpoint",
-    (_state: CompanyStateType) => "execution_router",
-    { execution_router: "execution_router" }
+    (state: CompanyStateType) => state.next_phase === "planning" ? "end" : "execution_router",
+    { end: END, execution_router: "execution_router" }
   );
   graph.addEdge("execution_router", "engineer");
   graph.addEdge("execution_router", "designer");

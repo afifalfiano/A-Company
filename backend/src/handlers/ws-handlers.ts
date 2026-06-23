@@ -1,6 +1,7 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { randomUUID } from "crypto";
 import { buildGraph } from "../graph.js";
+import { ceoIntake } from "../agents/ceo.js";
 import { codeGeneratorAgent } from "../agents/code-generator.js";
 import { designGeneratorAgent } from "../agents/design-generator.js";
 import { saveProject, loadProject } from "../db.js";
@@ -94,28 +95,8 @@ export async function handleProcessProject(
   saveProject(project);
 
   send(ws, { type: "processing_start", payload: { project } });
-
-  const emit = (event: AgentEvent) => broadcast({ type: "agent_event", payload: event }, wss);
-  const graph = buildGraph(emit);
-
-  try {
-    const result = await invokeWithTimeout(graph, {
-      raw_title: title,
-      raw_description: description,
-      current_project: project,
-      agent_events: [],
-      next_phase: "intake",
-    });
-
-    saveProject(result.current_project);
-    send(ws, { type: "processing_done", payload: { project: result.current_project } });
-    broadcast({ type: "project_update", payload: { project: result.current_project } }, wss, ws);
-  } catch (err) {
-    console.error("[Graph Error]", err);
-    const failed = { ...project, status: "pending" as const, is_running: false };
-    saveProject(failed);
-    send(ws, { type: "error", payload: { message: String(err) } });
-  }
+  send(ws, { type: "processing_done", payload: { project } });
+  broadcast({ type: "project_update", payload: { project } }, wss, ws);
 }
 
 // ─── Handler: start_planning ──────────────────────────────────────────────────
@@ -131,13 +112,13 @@ export async function handleStartPlanning(
     return;
   }
 
-  const project = loadProject(projectId);
+  let project = loadProject(projectId);
   if (!project) {
     send(ws, { type: "error", payload: { message: "Project not found" } });
     return;
   }
-  if (project.status !== "accepted") {
-    send(ws, { type: "error", payload: { message: "Project must be accepted by CEO first" } });
+  if (!["pending", "accepted"].includes(project.status)) {
+    send(ws, { type: "error", payload: { message: "Project cannot start planning in its current state" } });
     return;
   }
   if (project.current_phase === "planning" && project.planning_approved) {
@@ -147,6 +128,42 @@ export async function handleStartPlanning(
   if (project.is_running) {
     send(ws, { type: "error", payload: { message: "Planning already in progress" } });
     return;
+  }
+
+  // Run CEO intake for new (pending) projects before entering planning
+  if (project.status === "pending") {
+    const intakeProject: ProjectItem = { ...project, current_phase: "intake", status: "in_progress", is_running: true };
+    saveProject(intakeProject);
+    send(ws, { type: "phase_start", payload: { project: intakeProject, phase: "intake" } });
+    broadcast({ type: "project_update", payload: { project: intakeProject } }, wss, ws);
+
+    const emit = (event: AgentEvent) => broadcast({ type: "agent_event", payload: event }, wss);
+    try {
+      const ceoResult = await ceoIntake({
+        raw_title: project.project_title,
+        raw_description: project.project_description,
+        current_project: intakeProject,
+        agent_events: [],
+        next_phase: "planning",
+      }, emit);
+
+      const afterCeo: ProjectItem = { ...intakeProject, ...ceoResult.current_project };
+      if (afterCeo.status === "rejected") {
+        const saved: ProjectItem = { ...afterCeo, is_running: false };
+        saveProject(saved);
+        send(ws, { type: "processing_done", payload: { project: saved } });
+        broadcast({ type: "project_update", payload: { project: saved } }, wss, ws);
+        return;
+      }
+      project = { ...afterCeo, status: "accepted", is_running: false };
+      saveProject(project);
+    } catch (err) {
+      console.error("[CEO Intake Error]", err);
+      const failed: ProjectItem = { ...intakeProject, status: "pending", is_running: false };
+      saveProject(failed);
+      send(ws, { type: "error", payload: { message: String(err) } });
+      return;
+    }
   }
 
   const shouldResetPlanning = project.current_phase === "planning";
@@ -178,8 +195,8 @@ export async function handleStartPlanning(
 
     const saved = { ...result.current_project, is_running: false } as ProjectItem;
     saveProject(saved);
-    send(ws, { type: "processing_done", payload: { project: result.current_project } });
-    broadcast({ type: "project_update", payload: { project: result.current_project } }, wss, ws);
+    send(ws, { type: "processing_done", payload: { project: saved } });
+    broadcast({ type: "project_update", payload: { project: saved } }, wss, ws);
   } catch (err) {
     console.error("[Graph Error]", err);
     send(ws, { type: "error", payload: { message: String(err) } });
@@ -304,8 +321,8 @@ export async function handleStartExecution(
 
     const saved = { ...result.current_project, is_running: false } as ProjectItem;
     saveProject(saved);
-    send(ws, { type: "processing_done", payload: { project: result.current_project } });
-    broadcast({ type: "project_update", payload: { project: result.current_project } }, wss, ws);
+    send(ws, { type: "processing_done", payload: { project: saved } });
+    broadcast({ type: "project_update", payload: { project: saved } }, wss, ws);
   } catch (err) {
     console.error("[Graph Error]", err);
     send(ws, { type: "error", payload: { message: String(err) } });
@@ -403,8 +420,8 @@ export async function handleGenerateDesign(
     send(ws, { type: "error", payload: { message: "Project not found" } });
     return;
   }
-  if (project.current_phase !== "execution") {
-    send(ws, { type: "error", payload: { message: "Project must be in execution phase" } });
+  if (!["execution", "delivered"].includes(project.current_phase)) {
+    send(ws, { type: "error", payload: { message: "Project must have completed execution phase" } });
     return;
   }
   if (!project.designer_output?.wireframes?.length) {

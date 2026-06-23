@@ -52,25 +52,40 @@ export async function codeGeneratorAgent(
     timestamp: Date.now(),
   });
 
-  const model = getModel(0.2);
+  const model = getModel(0.2, 8192);
 
-  const systemPrompt = `You are an expert full-stack software engineer. Generate a complete, runnable project as a JSON array of file objects.
+  const systemPrompt = `You are an expert full-stack software engineer. Generate a complete, production-quality, runnable project as a JSON array of file objects.
 
-Rules:
-- Output ONLY valid JSON array: [{"path": "relative/path/file.ts", "content": "..."}, ...]
-- Paths must be relative to project root, no leading slash
-- Include ALL necessary files: package.json, tsconfig.json, src/index.ts, src/routes/*.ts, src/models/*.ts, src/services/*.ts, src/middleware/*.ts, .env.example, README.md, etc.
-- TypeScript is always used
-- All imports must use correct relative paths within the generated structure
-- For package.json: include ALL dependencies from the input (merged with standard deps), scripts: dev/build/start
-- For .env.example: include all env vars referenced in the code
-- code must be syntactically correct, complete, and runnable
-- README.md must include: project title, setup instructions (npm install && npm run dev)
-- NEVER use placeholder comments like "// TODO: implement" — provide actual logic
-- Max 50 files total
+CRITICAL: Output ONLY a valid JSON array. No prose, no markdown, no code fences. Start with [ and end with ].
+Format: [{"path": "relative/path/file.ext", "content": "full file content here"}, ...]
 
-For monorepo mode: include workspace package.json at root + packages/api, packages/web, packages/shared
-For monolith mode: single package.json at root with all deps and src/ containing everything`;
+Requirements:
+- Paths relative to project root, no leading slash
+- TypeScript everywhere
+- All imports use correct relative paths
+- package.json: include ALL dependencies + scripts: dev/build/start/test
+- .env.example: every env var referenced in code
+- Code must be syntactically correct, complete, runnable — NO placeholders, NO "// TODO", NO stub functions
+- README.md: project title, description, setup steps (npm install && npm run dev), env vars
+
+File structure (monolith):
+  package.json, tsconfig.json, .env.example, README.md
+  src/index.ts (entry point — boots the server/app)
+  src/routes/ (one file per resource)
+  src/models/ (data models / schemas)
+  src/services/ (business logic)
+  src/middleware/ (auth, validation, error handling)
+  src/types/ (shared TypeScript interfaces)
+  If it is a web app / landing page: also include src/public/index.html + src/public/styles.css with real HTML/CSS content
+
+File structure (monorepo):
+  package.json (workspaces), tsconfig.json, .env.example, README.md
+  packages/api/ — same as monolith src/
+  packages/web/ — full React/Vite frontend with src/App.tsx, src/main.tsx, index.html, vite.config.ts
+  packages/shared/ — shared types and utilities
+
+Generate at least 8 meaningful files with real, working implementation code. If the project is a landing page or website, generate real HTML with semantic markup, CSS with proper styles, and any required JS.`;
+
 
   const humanMessage = `Project: ${project_title}
 Description: ${project_description}

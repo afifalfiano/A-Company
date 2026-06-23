@@ -97,7 +97,6 @@ export function useWebSocket(url: string) {
         case "processing_start":
           setEvents([]);
           setProcessing(true);
-          setActiveAgent("ceo");
           // Add project immediately so it shows in the board during processing
           if (msg.payload?.project) {
             setProjects((prev) => {

@@ -57,8 +57,8 @@ export function ProjectBoard({
           const priorityColor = PRIORITY_COLORS[project.ceo_decision?.priority] ?? "#666";
           const isSelected = selectedId === project.project_id;
 
-          const isPendingPlanning = project.status === "accepted" && !project.planning_approved;
-          const isPendingExecution = project.current_phase === "execution" && !project.execution_approved;
+          const isPendingPlanning = project.current_phase === "planning" && !project.is_running && !project.planning_approved;
+          const isPendingExecution = project.current_phase === "execution" && !project.is_running && !project.execution_approved;
 
           return (
             <div
@@ -183,13 +183,13 @@ export function ProjectBoard({
                 >
                   View Detail
                 </button>
-                {project.status === "accepted" && !project.planning_approved && (
+                {project.status === "pending" && (
                   <button
                     className="btn-primary"
                     style={{ flex: 1, justifyContent: "center" }}
                     onClick={(e) => { e.stopPropagation(); onStartPlanning(project.project_id); }}
                   >
-                    Review Planning
+                    Start Planning
                   </button>
                 )}
               </div>
@@ -228,7 +228,7 @@ export function ProjectBoard({
                 </div>
               )}
 
-              {project.current_phase === "execution" && project.designer_output && (
+              {["execution", "delivered"].includes(project.current_phase) && project.designer_output?.wireframes?.length > 0 && (
                 <div style={{ marginTop: "10px" }}>
                   {generatingProjectId === project.project_id ? (
                     <div style={{ padding: "8px 12px", background: "#2a1a3d", border: "1px solid #9B59B644", borderRadius: "8px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>

@@ -36,11 +36,11 @@ export interface AgentTokenUsage {
 
 // ─── LLM Config ────────────────────────────────────────────────────────────────
 
-export function getModel(temperature = 0.3) {
+export function getModel(temperature = 0.3, maxTokens = 4096) {
   const client = new ChatAnthropic({
     model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
     temperature,
-    maxTokens: 4096,
+    maxTokens,
   });
   // ponytail: @langchain/anthropic@0.3.34 defaults topP to -1 and sends it unconditionally; API rejects both temperature+top_p
   (client as any).topP = undefined;
