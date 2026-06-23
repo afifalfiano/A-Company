@@ -247,7 +247,7 @@ export function ProjectBoard({
                 </div>
               )}
 
-              {(project.current_phase === "review" || project.current_phase === "delivered") && (
+              {project.current_phase === "delivered" && project.status === "done" && (
                 <div style={{ marginTop: "10px" }}>
                   {generatingProjectId === project.project_id ? (
                     <div style={{ padding: "8px 12px", background: "#2a2645", border: "1px solid #7F77DD44", borderRadius: "8px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
