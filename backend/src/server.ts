@@ -87,7 +87,7 @@ interface WsMessage {
 
 wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
   console.log("[WS] Client connected");
-  send(ws, { type: "connected", payload: { message: "A-Company Software House ready!" } });
+  send(ws, { type: "connected", payload: { message: "Happy-Agents Software House ready!" } });
 
   // Extract client IP for rate limiting
   const ip =

@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, EngineerOutput, ProjectItem } from "../st
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the Senior Engineer at A-Company — pragmatic and detail-oriented.
+const SYSTEM = `You are the Senior Engineer at Happy-Agents — pragmatic and detail-oriented.
 Your job: create a concrete implementation plan with breakdown steps, code structure, estimates, and dependencies.
 
 Reference the CTO architecture when building the plan. The plan must:

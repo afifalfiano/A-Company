@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A-Company — real-time project processing via 8 AI agents using LangGraph.js + WebSocket. Pipeline produces planning docs, code, and a downloadable ZIP.
+Happy-Agents — real-time project processing via 8 AI agents using LangGraph.js + WebSocket. Pipeline produces planning docs, code, and a downloadable ZIP.
 
 ## Commands
 
@@ -72,7 +72,7 @@ docker-compose up --build
 ### Frontend (React + Vite)
 
 **WebSocket connection** to `ws://localhost:3001` with exponential backoff reconnect (max 5 attempts).
-Projects persisted to `localStorage` key `acompany_projects`.
+Projects persisted to `localStorage` key `happy_agents_projects`.
 
 **Component hierarchy**:
 - `App.tsx` — main layout, passes hook values to components

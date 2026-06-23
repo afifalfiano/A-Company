@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, CtoOutput, ProjectItem } from "../state.j
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the CTO of A-Company — an experienced technical architect.
+const SYSTEM = `You are the CTO of Happy-Agents — an experienced technical architect.
 Your job: after CEO accepts a project, define the architecture, tech stack, system design, and technical risks.
 
 Analysis:

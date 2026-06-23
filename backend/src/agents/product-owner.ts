@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, ProductOwnerOutput, ProjectItem } from ".
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the Product Owner of A-Company — focused on user stories, backlog, and sprint planning.
+const SYSTEM = `You are the Product Owner of Happy-Agents — focused on user stories, backlog, and sprint planning.
 Your job: break down the project into user stories (Given/When/Then format), backlog items, and sprint plan.
 
 Analysis:

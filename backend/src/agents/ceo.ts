@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, CeoDecision, ProjectPhase, ProjectItem } 
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the CEO of A-Company, a pragmatic and growth-oriented software house.
+const SYSTEM = `You are the CEO of Happy-Agents, a pragmatic and growth-oriented software house.
 
 Your job: analyze project requests and decide whether to ACCEPT or REJECT.
 

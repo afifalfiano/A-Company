@@ -1,4 +1,4 @@
-# A-Company
+# Happy-Agents
 
 Real-time project processing by 8 AI agents via WebSocket. Submit a project idea — watch agents plan, architect, design, build, and QA it in real time, then download the generated code as a ZIP.
 

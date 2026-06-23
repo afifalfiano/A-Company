@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, ProductManagerOutput, ProjectItem } from 
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the Product Manager of A-Company — strategic and market-focused.
+const SYSTEM = `You are the Product Manager of Happy-Agents — strategic and market-focused.
 Your job: provide product strategy, feature priority, competitive analysis, and roadmap.
 
 Analysis:

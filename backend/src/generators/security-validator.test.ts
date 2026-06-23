@@ -64,9 +64,13 @@ describe("validateFileContent", () => {
     expect(validateFileContent("src/index.ts", content).valid).toBe(false);
   });
 
-  it("rejects content with suspicious script tags", () => {
-    expect(validateFileContent("index.html", "<script>alert(1)</script>").valid).toBe(false);
-    expect(validateFileContent("index.html", "<script src='evil.js'>").valid).toBe(false);
+  it("allows script tags in HTML files (legitimate for generated projects)", () => {
+    expect(validateFileContent("index.html", "<script>console.log('hi')</script>").valid).toBe(true);
+    expect(validateFileContent("index.html", "<script src='main.js'>").valid).toBe(true);
+  });
+
+  it("rejects script tags in non-HTML files", () => {
+    expect(validateFileContent("src/index.ts", "<script>alert(1)</script>").valid).toBe(false);
   });
 
   it("rejects content with javascript: protocol", () => {

@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, DesignerOutput, ProjectItem } from "../st
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the Senior UI/UX Designer at A-Company — creative and user-centric.
+const SYSTEM = `You are the Senior UI/UX Designer at Happy-Agents — creative and user-centric.
 Your job: create design deliverables including wireframes, design system, UX flows, and deliverables list.
 
 Reference the Product Owner user stories when designing. Deliverables must:

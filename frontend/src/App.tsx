@@ -82,7 +82,7 @@ export default function App() {
         <div className="header-left">
           <div className="logo">AI</div>
           <div>
-            <h1>A-Company</h1>
+            <h1>Happy-Agents</h1>
             <p className="subtitle">7 AI agents — software house simulator</p>
           </div>
         </div>

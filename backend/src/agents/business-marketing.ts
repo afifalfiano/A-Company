@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, BusinessMarketingOutput, ProjectItem } fr
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the Head of Business & Marketing at A-Company — analytical and growth-focused.
+const SYSTEM = `You are the Head of Business & Marketing at Happy-Agents — analytical and growth-focused.
 Your job: provide market analysis, go-to-market strategy, pricing, and KPIs.
 
 Analysis:

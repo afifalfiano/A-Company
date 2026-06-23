@@ -3,6 +3,7 @@ import path from "path";
 const ALLOWED_EXTENSIONS = new Set([
   ".ts", ".tsx", ".json", ".js", ".jsx", ".md", ".yml", ".yaml",
   ".env", ".css", ".html", ".txt", ".gitignore", ".dockerignore",
+  ".prisma", ".graphql", ".gql", ".sql", ".svg", ".scss", ".less", ".toml",
 ]);
 
 const BLOCKED_EXTENSIONS = new Set([
@@ -64,9 +65,12 @@ export function validateFileContent(
     };
   }
 
-  // Basic suspicious pattern detection
+  const ext = path.extname(filePath).toLowerCase();
+  const isHtml = ext === ".html";
+
+  // Basic suspicious pattern detection — script tags are legitimate in HTML files
   const suspicious = [
-    { pattern: /<script[^>]*>/i, name: "script tag" },
+    ...(!isHtml ? [{ pattern: /<script[^>]*>/i, name: "script tag" }] : []),
     { pattern: /javascript:/i, name: "javascript: protocol" },
     { pattern: /data:text\/html/i, name: "data:text/html" },
   ];

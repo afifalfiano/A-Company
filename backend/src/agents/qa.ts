@@ -3,7 +3,7 @@ import { CompanyStateType, AgentEvent, QaOutput, ProjectItem } from "../state.js
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
-const SYSTEM = `You are the QA Lead at A-Company — thorough and detail-oriented.
+const SYSTEM = `You are the QA Lead at Happy-Agents — thorough and detail-oriented.
 Your job: review the generated code output and create a test plan, test cases, quality gates, and risk assessment.
 
 You receive: the engineer implementation plan, designer deliverables, AND the actual generated code file list.

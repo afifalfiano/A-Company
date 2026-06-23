@@ -1,4 +1,4 @@
-# A-Company Architecture
+# Happy-Agents Architecture
 
 ## System Overview
 
@@ -48,7 +48,7 @@ Utils:
 ```
 User action → App.tsx handler → useWebSocket.send*() → WebSocket → Backend
 Backend → WebSocket message → useWebSocket setState → React re-render
-Projects synced to localStorage (key: "acompany_projects")
+Projects synced to localStorage (key: "happy_agents_projects")
 ```
 
 ---
