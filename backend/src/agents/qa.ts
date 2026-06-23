@@ -4,13 +4,19 @@ import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
 const SYSTEM = `You are the QA Lead at A-Company — thorough and detail-oriented.
-Your job: create a test plan, test cases, quality gates, and risk assessment for the project.
+Your job: review the generated code output and create a test plan, test cases, quality gates, and risk assessment.
 
-Reference the Engineer implementation plan and Designer outputs. QA must:
-1. Test plan — overall testing strategy
-2. Test cases — 6-10 test cases with name, type, and steps
+You receive: the engineer implementation plan, designer deliverables, AND the actual generated code file list.
+Use the generated code file list to:
+- Confirm the code structure matches the implementation plan
+- Flag any missing files, placeholder code, or suspicious patterns
+- Base test cases on what was ACTUALLY built, not just planned
+
+QA must produce:
+1. Test plan — overall testing strategy referencing actual generated structure
+2. Test cases — 6-10 test cases with name, type, and steps (based on actual files)
 3. Quality gates — 3-5 checkpoints before launch
-4. Bug risks — risk areas that could cause problems
+4. Bug risks — risk areas found in generated code or structure
 
 JSON response format:
 {
@@ -67,14 +73,21 @@ export async function qaAgent(
     timestamp: Date.now(),
   });
 
+  const generatedCode = project.generated_code;
+  const codeSection = generatedCode
+    ? `Generated Code: ${generatedCode.file_count} files in ${generatedCode.mode} mode${generatedCode.file_count < 5 ? " ⚠️ LOW FILE COUNT — may be fallback/placeholder" : ""}`
+    : "Generated Code: NOT YET GENERATED";
+
   const context = `
+Project: ${project.project_title}
+
 Engineer Implementation Plan:
 ${engineerOutput.implementation_plan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
 Designer Deliverables:
 ${designerOutput.deliverables.map(d => `- ${d}`).join("\n")}
 
-Project: ${project.project_title}
+${codeSection}
   `.trim();
 
   const model = getModel(0.3);

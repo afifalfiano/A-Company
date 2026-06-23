@@ -252,29 +252,35 @@ export function ProjectBoard({
                   {generatingProjectId === project.project_id ? (
                     <div style={{ padding: "8px 12px", background: "#2a2645", border: "1px solid #7F77DD44", borderRadius: "8px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                       <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
-                      <span style={{ color: "#9B8FD9", fontSize: "12px", fontWeight: 600 }}>Generating...</span>
+                      <span style={{ color: "#9B8FD9", fontSize: "12px", fontWeight: 600 }}>Regenerating...</span>
                     </div>
                   ) : project.generated_code ? (
                     <div style={{ display: "flex", gap: "6px", flexDirection: "column" }}>
-                      <div style={{ padding: "8px 12px", background: "#1a3028", border: "1px solid #2a5040", borderRadius: "8px", textAlign: "center" }}>
-                        <span style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px" }}>✓ {project.generated_code.file_count} files generated</span>
+                      <div style={{ padding: "8px 12px", background: "#1a3028", border: "1px solid #2a5040", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px" }}>✓ {project.generated_code.file_count} files</span>
+                        <a
+                          href={`http://localhost:3001/download/${project.project_id}`}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: "#7F77DD", fontSize: "12px", fontWeight: 600, textDecoration: "none" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📦 Download
+                        </a>
                       </div>
                       <button
                         className="btn-primary"
-                        style={{ width: "100%", justifyContent: "center", background: "#7F77DD" }}
+                        style={{ width: "100%", justifyContent: "center", background: "#444", fontSize: "12px" }}
                         onClick={(e) => { e.stopPropagation(); onGenerateCode(project.project_id); }}
                       >
-                        ⚡ Regenerate
+                        ↺ Regenerate
                       </button>
                     </div>
                   ) : (
-                    <button
-                      className="btn-primary"
-                      style={{ width: "100%", justifyContent: "center", background: "#7F77DD" }}
-                      onClick={(e) => { e.stopPropagation(); onGenerateCode(project.project_id); }}
-                    >
-                      ⚡ Generate Code
-                    </button>
+                    <div style={{ padding: "8px 12px", background: "#2a2645", border: "1px solid #7F77DD44", borderRadius: "8px", textAlign: "center" }}>
+                      <span style={{ color: "#9B8FD9", fontSize: "12px" }}>Code generating in pipeline...</span>
+                    </div>
                   )}
                 </div>
               )}

@@ -8,6 +8,7 @@ import { businessMarketingAgent } from "./agents/business-marketing.js";
 import { engineerAgent } from "./agents/engineer.js";
 import { designerAgent } from "./agents/designer.js";
 import { qaAgent } from "./agents/qa.js";
+import { codeGeneratorAgent } from "./agents/code-generator.js";
 
 // ─── Phase barrier / checkpoint nodes ────────────────────────────────────────
 
@@ -148,6 +149,22 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("business_marketing",(state: CompanyStateType) => withRetry("business_marketing",businessMarketingAgent, state, emit));
   graph.addNode("engineer",         (state: CompanyStateType) => withRetry("engineer",         engineerAgent,          state, emit));
   graph.addNode("designer",          (state: CompanyStateType) => withRetry("designer",         designerAgent,          state, emit));
+  graph.addNode("code_gen",         (state: CompanyStateType) => withRetry("code_generator",
+    (s, e) => {
+      const p = s.current_project;
+      return codeGeneratorAgent(s, e, {
+        project_id: p.project_id,
+        project_title: p.project_title,
+        project_description: p.project_description,
+        tech_stack: p.cto_output?.tech_stack ?? [],
+        implementation_plan: p.engineer_output?.implementation_plan ?? [],
+        code_structure: p.engineer_output?.code_structure ?? "",
+        wireframes: p.designer_output?.wireframes ?? [],
+        design_system: p.designer_output?.design_system ?? "",
+        dependencies: p.engineer_output?.dependencies ?? [],
+        mode: "monolith",
+      });
+    }, state, emit));
   graph.addNode("qa",               (state: CompanyStateType) => withRetry("qa",               qaAgent,                state, emit));
   graph.addNode("execution_router", (_state: CompanyStateType) => ({}));
   graph.addNode("ceo_review",        (state: CompanyStateType) => deterministicReview(state, emit));
@@ -220,11 +237,12 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addEdge("execution_router", "engineer");
   graph.addEdge("execution_router", "designer");
 
-  // Both fan-in to qa
-  graph.addEdge("engineer", "qa");
-  graph.addEdge("designer", "qa");
+  // Both fan-in to code_gen, then QA reviews actual generated files
+  graph.addEdge("engineer", "code_gen");
+  graph.addEdge("designer", "code_gen");
+  graph.addEdge("code_gen", "qa");
 
-  // QA → CEO Review → Finalize → END (no auto code-gen)
+  // QA → CEO Review → Finalize → END
   graph.addEdge("qa", "ceo_review");
   graph.addEdge("ceo_review", "finalize");
   graph.addEdge("finalize", END);
