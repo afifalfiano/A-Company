@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { existsSync, unlinkSync } from "fs";
+import { existsSync, unlinkSync, writeFileSync } from "fs";
 import { saveProject, loadProject, getAllProjects } from "./db.js";
 import type { ProjectItem } from "./state.js";
 
@@ -39,12 +39,20 @@ function mockProject(id: string): ProjectItem {
 }
 
 describe("db", () => {
+  let originalDbPath: string | undefined;
+
   beforeEach(() => {
+    originalDbPath = process.env.DB_PATH;
     process.env.DB_PATH = TEST_DB;
     if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
   });
   afterEach(() => {
     if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
+    if (originalDbPath === undefined) {
+      delete process.env.DB_PATH;
+    } else {
+      process.env.DB_PATH = originalDbPath;
+    }
   });
 
   it("saves and loads a project", () => {
@@ -61,6 +69,12 @@ describe("db", () => {
 
   it("returns undefined for unknown id", () => {
     expect(loadProject("nope")).toBeUndefined();
+  });
+
+  it("returns empty store when file contains invalid JSON", () => {
+    writeFileSync(TEST_DB, "not valid json {{", "utf-8");
+    expect(getAllProjects()).toEqual([]);
+    expect(loadProject("any")).toBeUndefined();
   });
 
   it("overwrites existing project on resave", () => {

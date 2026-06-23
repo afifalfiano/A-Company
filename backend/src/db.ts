@@ -13,7 +13,8 @@ function load(): Store {
   if (!existsSync(p)) return {};
   try {
     return JSON.parse(readFileSync(p, "utf-8")) as Store;
-  } catch {
+  } catch (err) {
+    console.error(`[db] Failed to parse ${p}:`, err);
     return {};
   }
 }
