@@ -281,7 +281,10 @@ export function useWebSocket(url: string) {
     }));
   }, []);
 
-  const clearProjects = useCallback(() => setProjects([]), []);
+  const clearProjects = useCallback(() => {
+    fetch(httpBase + "/projects", { method: "DELETE" }).catch(() => {});
+    setProjects([]);
+  }, [httpBase]);
 
   return {
     connected,

@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { createReadStream, existsSync } from "fs";
 import path from "path";
-import { getAllProjects, loadProject, saveProject } from "../db.js";
+import { getAllProjects, loadProject, saveProject, clearAllProjects } from "../db.js";
 import { validateProjectInput } from "../validation.js";
 import { makeEmptyProject } from "./ws-handlers.js";
 
@@ -64,11 +64,17 @@ function downloadZip(req: Request, res: Response): void {
 
 // ─── Router factory ───────────────────────────────────────────────────────────
 
+function deleteAllProjects(_req: Request, res: Response): void {
+  clearAllProjects();
+  res.json({ ok: true });
+}
+
 export function makeRestRouter(): Router {
   const router = Router();
   router.get("/projects", getProjects);
   router.get("/projects/:id", getProject);
   router.post("/projects", createProject);
+  router.delete("/projects", deleteAllProjects);
   router.get("/download/:projectId", downloadZip);
   return router;
 }

@@ -48,6 +48,12 @@ export function getAllProjects(): ProjectItem[] {
   return [...memStore.values()];
 }
 
+export function clearAllProjects(): void {
+  ensureLoaded();
+  memStore.clear();
+  persist();
+}
+
 // For testing only — forces a reload from disk on next access.
 export function _clearCache(): void {
   cachedPath = null;
