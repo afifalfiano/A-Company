@@ -8,6 +8,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AgentName } from "./models";
 
 const EXAMPLE_PROJECTS = [
+  "Create landing page (no server, no database)",
   "Real-time inventory system for warehouse",
   "Mobile app for meeting room booking",
   "Analytics dashboard for e-commerce",
