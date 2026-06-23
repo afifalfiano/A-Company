@@ -1,1 +1,4 @@
 .worktrees/
+
+# Generated code output — never commit
+backend/generated/

@@ -1,78 +1,102 @@
 # A-Company
 
-Real-time todo processing by 7 AI agents via WebSocket.
+Real-time project processing by 8 AI agents via WebSocket. Submit a project idea — watch agents plan, architect, design, build, and QA it in real time, then download the generated code as a ZIP.
 
 ## Agents
 
-| Agent | Category | Responsibility |
+| Agent | Role | Output |
 |---|---|---|
-| CEO | all | Analyzes priority & delegates to correct agents |
-| CTO | technical | Architecture & tech stack decisions |
-| Product Owner | product | User stories & backlog |
-| Product Manager | product | Strategy & roadmap |
-| Business & Marketing | business | Market analysis & KPIs |
-| Engineer | technical | Implementation plan & estimates |
-| Designer | design | UI/UX wireframes & deliverables |
-| QA | quality | Test plan & quality gates |
-| Finalize | — | Wrap up all outputs |
+| CEO | Intake + Final Review | Accept/reject decision, launch approval |
+| CTO | Architecture | Tech stack, system design, risks |
+| Product Owner | Product | User stories, backlog, sprint plan |
+| Product Manager | Strategy | Roadmap, feature priority, competitive analysis |
+| Business & Marketing | Business | Market analysis, GTM, KPIs |
+| Engineer | Implementation | Plan, code structure, estimates, dependencies |
+| Designer | UX/UI | Wireframes, design system, UX flows |
+| QA | Quality | Test plan, test cases, quality gates |
+| Code Generator | Output | Source files + ZIP (monolith or monorepo) |
 
-## Pipeline Phases
+## Pipeline
 
 ```
 intake → planning → execution → quality → review → delivered
 ```
 
-Human-in-the-loop gates at **planning approval** and **execution approval**.
+Human-in-the-loop gates at **planning** (approve CTO/PO/PM/BM output) and **execution** (approve Engineer+Designer output).
 
-## Setup
+## Quick Start
 
-### 1. Backend
+### Option A — Docker (recommended)
 
+```bash
+cp backend/.env.example backend/.env
+# Edit backend/.env: set ANTHROPIC_API_KEY
+docker-compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3001
+
+### Option B — Local dev
+
+**Backend**
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and set OPENAI_API_KEY or ANTHROPIC_API_KEY
+# Edit .env: set ANTHROPIC_API_KEY
 npm install
-npm run dev
+npm run dev       # port 3001
 ```
 
-Backend runs on **port 3001** with WebSocket at `ws://localhost:3001`.
-
-### 2. Frontend
-
+**Frontend** (separate terminal)
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev       # port 5173
 ```
 
-Frontend runs on **http://localhost:5173**.
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | — | **Required.** Anthropic API key |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model ID |
+| `API_KEY` | — | Optional. If set, all HTTP + WS requests must supply it |
+| `CORS_ORIGIN` | `*` | Restrict CORS in production (e.g. `https://yourapp.com`) |
+| `DB_PATH` | `./data/projects.json` | JSON project store path |
+| `GRAPH_TIMEOUT_MS` | `300000` | Max ms per graph invocation (5 min) |
+| `WS_RATE_MAX` | `30` | Max WS messages per window per IP |
+| `WS_RATE_WINDOW_MS` | `60000` | Rate limit window in ms |
 
 ## Usage
 
-1. Ensure backend is running (WebSocket on port 3001)
-2. Open frontend in browser
-3. Enter a project title or click an example
-4. Watch agents work in real-time on the left panel
-5. Review full output in the project detail modal
-6. Approve/reject at planning and execution gates
-
-## Workflow
-
-1. **Submit project** → CEO decides accept/reject
-2. **Review Planning** → View CTO/PO/PM/BM outputs → Approve/Reject
-3. **Start Execution** → Engineer → Designer → QA run
-4. **Approve Execution** → Final review → Project delivered
-5. **Download PRD/TRD** → Export documentation from project detail modal
+1. Open http://localhost:5173
+2. Enter a project title + description (or click an example)
+3. Watch agents work in real time on the left panel
+4. **Planning gate** — review CTO/PO/PM/BM output, click Approve or Reject
+5. Click **Start Execution** — Engineer + Designer + Code Gen + QA run
+6. **Execution gate** — review output, click Approve
+7. View full output in the project detail modal
+8. Download generated code as ZIP (monolith or monorepo)
+9. Export PRD/TRD documentation from the project detail modal
 
 ## Tech Stack
 
-- **Backend**: Node.js + Express + WebSocket (ws) + LangGraph.js
-- **Frontend**: React + Vite + TypeScript + Tailwind CSS
-- **AI**: OpenAI-compatible API (OpenAI, Anthropic, or MiniMax)
+- **Backend**: Node.js + Express + WebSocket (`ws`) + LangGraph.js + `@langchain/anthropic`
+- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS
+- **AI**: Anthropic Claude (configurable model via `ANTHROPIC_MODEL`)
+- **Persistence**: JSON file store (`./data/projects.json`)
+- **Containerization**: Docker + docker-compose
+
+## Tests
+
+```bash
+cd backend && npm test        # vitest unit tests
+cd frontend && npm test       # vitest unit tests
+```
 
 ## Documentation
 
+- [Architecture](./ARCHITECTURE.md)
 - [Backend Changelog](./backend/CHANGELOG.md)
 - [Frontend Changelog](./frontend/CHANGELOG.md)
-- [PRD/TRD Plan](./docs/superpowers/plans/2026-05-03-prd-trd-document-generator.md)
