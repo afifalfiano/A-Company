@@ -1,9 +1,16 @@
 import path from "path";
 
 const ALLOWED_EXTENSIONS = new Set([
-  ".ts", ".tsx", ".json", ".js", ".jsx", ".md", ".yml", ".yaml",
-  ".env", ".css", ".html", ".txt", ".gitignore", ".dockerignore",
-  ".prisma", ".graphql", ".gql", ".sql", ".svg", ".scss", ".less", ".toml",
+  ".ts", ".tsx", ".mts", ".cts", ".d.ts",
+  ".js", ".jsx", ".mjs", ".cjs",
+  ".json", ".md", ".yml", ".yaml",
+  ".env", ".css", ".html", ".txt",
+  ".vue", ".svelte", ".astro",
+  ".ejs", ".hbs",
+  ".prisma", ".graphql", ".gql", ".sql",
+  ".svg", ".scss", ".less", ".toml",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico",
+  ".woff", ".woff2", ".ttf", ".eot",
 ]);
 
 const BLOCKED_EXTENSIONS = new Set([
@@ -26,19 +33,26 @@ export function validateFilePath(filePath: string, baseDir: string): ValidationR
     return { valid: false, errors: [`Absolute paths not allowed: ${filePath}`] };
   }
 
-  // Disallow hidden files (except allowlist)
-  const basename = path.basename(filePath);
-  const allowHidden = new Set([".gitignore", ".env.example", ".dockerignore", ".env"]);
-  if (basename.startsWith(".") && !allowHidden.has(basename)) {
-    return { valid: false, errors: [`Hidden files not allowed: ${filePath}`] };
-  }
-
-  // Check extension (skip for hidden allowlist files with no or non-standard ext)
+  // Check extension first (apply to all files)
   const ext = path.extname(filePath).toLowerCase();
   if (BLOCKED_EXTENSIONS.has(ext)) {
     return { valid: false, errors: [`Blocked extension: ${ext}`] };
   }
-  if (!allowHidden.has(basename) && ext && !ALLOWED_EXTENSIONS.has(ext)) {
+
+  // Disallow hidden files — allow if extension is recognized or in explicit allowlist
+  const basename = path.basename(filePath);
+  const allowHidden = new Set([
+    ".gitignore", ".env.example", ".dockerignore", ".env",
+    ".eslintrc", ".prettierrc", ".nvmrc", ".node-version",
+    ".gitkeep", ".gitattributes", ".gitmodules",
+  ]);
+  if (basename.startsWith(".")) {
+    const allowedExt = ext && ALLOWED_EXTENSIONS.has(ext);
+    const allowedName = allowHidden.has(basename);
+    if (!allowedExt && !allowedName) {
+      return { valid: false, errors: [`Hidden files not allowed: ${filePath}`] };
+    }
+  } else if (ext && !ALLOWED_EXTENSIONS.has(ext)) {
     return { valid: false, errors: [`Extension not allowed: ${ext}`] };
   }
 
