@@ -79,7 +79,18 @@ function CodeBlock({ value }: { value: unknown }) {
 
 export function ProjectDetail({ project, onClose }: Props) {
   const phaseColor = PHASE_COLORS[project.current_phase] ?? "#666";
-  const priorityColor = PRIORITY_COLORS[project.ceo_decision.priority] ?? "#666";
+  const priorityColor = PRIORITY_COLORS[project.ceo_decision?.priority] ?? "#666";
+
+  // Normalize missing agent outputs — projects may be partial if loaded from stale state
+  const ceoDec   = project.ceo_decision             ?? { accepted: false, priority: "—", reasoning: "", resource_allocation: "" };
+  const cto      = project.cto_output               ?? { architecture: "", tech_stack: [], system_design: "", technical_risks: [] };
+  const po       = project.product_owner_output     ?? { user_stories: [], backlog: [], sprint_plan: "" };
+  const pm       = project.product_manager_output   ?? { strategy: "", roadmap: [], feature_priority: [], competitive_analysis: "" };
+  const bm       = project.business_marketing_output ?? { market_analysis: "", go_to_market: [], pricing_strategy: "", kpis: [] };
+  const eng      = project.engineer_output          ?? { implementation_plan: [], code_structure: "", estimates: {}, dependencies: [] };
+  const des      = project.designer_output          ?? { wireframes: [], design_system: "", ux_flows: [], deliverables: [] };
+  const qa       = project.qa_output                ?? { test_plan: "", test_cases: [], quality_gates: [], bug_risks: [] };
+  const ceoRev   = project.ceo_review               ?? { approved: false, feedback: "", launch_decision: "" };
 
   return (
     <div style={{
@@ -110,7 +121,7 @@ export function ProjectDetail({ project, onClose }: Props) {
                 {project.current_phase}
               </span>
               <span style={{ fontSize: "11px", color: priorityColor, background: `${priorityColor}22`, padding: "2px 8px", borderRadius: "10px" }}>
-                {project.ceo_decision.priority}
+                {ceoDec.priority}
               </span>
               <span style={{ fontSize: "11px", color: "#666680", padding: "2px 8px", borderRadius: "10px" }}>
                 #{project.project_id}
@@ -197,30 +208,30 @@ export function ProjectDetail({ project, onClose }: Props) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div>
                 <span style={{ fontSize: "11px", color: "#666680" }}>Accepted</span>
-                <p style={{ fontSize: "13px", color: project.ceo_decision.accepted ? "#1D9E75" : "#E24B4A" }}>
-                  {project.ceo_decision.accepted ? "✓ Yes" : "✗ No"}
+                <p style={{ fontSize: "13px", color: ceoDec.accepted ? "#1D9E75" : "#E24B4A" }}>
+                  {ceoDec.accepted ? "✓ Yes" : "✗ No"}
                 </p>
               </div>
               <div>
                 <span style={{ fontSize: "11px", color: "#666680" }}>Priority</span>
-                <p style={{ fontSize: "13px", color: priorityColor }}>{project.ceo_decision.priority}</p>
+                <p style={{ fontSize: "13px", color: priorityColor }}>{ceoDec.priority}</p>
               </div>
             </div>
-            <Field label="Reasoning" value={project.ceo_decision.reasoning} />
-            <Field label="Resource Allocation" value={project.ceo_decision.resource_allocation} />
+            <Field label="Reasoning" value={ceoDec.reasoning} />
+            <Field label="Resource Allocation" value={ceoDec.resource_allocation} />
           </Section>
 
           {/* CTO Output */}
           <Section title="CTO — Architecture & Tech Stack" color={SECTION_COLORS.cto_output}>
-            <Field label="Architecture" value={project.cto_output.architecture} />
-            <ListField label="Tech Stack" items={project.cto_output.tech_stack} />
-            <Field label="System Design" value={project.cto_output.system_design} />
-            <ListField label="Technical Risks" items={project.cto_output.technical_risks} />
+            <Field label="Architecture" value={cto.architecture} />
+            <ListField label="Tech Stack" items={cto.tech_stack} />
+            <Field label="System Design" value={cto.system_design} />
+            <ListField label="Technical Risks" items={cto.technical_risks} />
           </Section>
 
           {/* Product Owner Output */}
           <Section title="Product Owner — User Stories & Backlog" color={SECTION_COLORS.product_owner_output}>
-            {(project.product_owner_output?.user_stories ?? []).map((us, i) => (
+            {po.user_stories.map((us, i) => (
               <div key={i} style={{ marginBottom: "12px", background: "#1a1a26", borderRadius: "8px", padding: "10px" }}>
                 <div style={{ fontSize: "12px", color: "#D4537E", marginBottom: "4px" }}>Story #{i + 1}</div>
                 <p style={{ fontSize: "12px", color: "#e2e2e8", marginBottom: "4px" }}>
@@ -235,34 +246,34 @@ export function ProjectDetail({ project, onClose }: Props) {
                 )}
               </div>
             ))}
-            <Field label="Sprint Plan" value={project.product_owner_output.sprint_plan} />
+            <Field label="Sprint Plan" value={po.sprint_plan} />
           </Section>
 
           {/* Product Manager Output */}
           <Section title="Product Manager — Strategy & Roadmap" color={SECTION_COLORS.product_manager_output}>
-            <Field label="Strategy" value={project.product_manager_output.strategy} />
-            <ListField label="Roadmap" items={project.product_manager_output.roadmap} />
-            <ListField label="Feature Priority" items={project.product_manager_output.feature_priority} />
-            <Field label="Competitive Analysis" value={project.product_manager_output.competitive_analysis} />
+            <Field label="Strategy" value={pm.strategy} />
+            <ListField label="Roadmap" items={pm.roadmap} />
+            <ListField label="Feature Priority" items={pm.feature_priority} />
+            <Field label="Competitive Analysis" value={pm.competitive_analysis} />
           </Section>
 
           {/* Business & Marketing Output */}
           <Section title="Business & Marketing" color={SECTION_COLORS.business_marketing_output}>
-            <Field label="Market Analysis" value={project.business_marketing_output.market_analysis} />
-            <ListField label="Go-to-Market" items={project.business_marketing_output.go_to_market} />
-            <Field label="Pricing Strategy" value={project.business_marketing_output.pricing_strategy} />
-            <ListField label="KPIs" items={project.business_marketing_output.kpis} />
+            <Field label="Market Analysis" value={bm.market_analysis} />
+            <ListField label="Go-to-Market" items={bm.go_to_market} />
+            <Field label="Pricing Strategy" value={bm.pricing_strategy} />
+            <ListField label="KPIs" items={bm.kpis} />
           </Section>
 
           {/* Engineer Output */}
           <Section title="Engineer — Implementation Plan" color={SECTION_COLORS.engineer_output}>
-            <ListField label="Implementation Plan" items={project.engineer_output.implementation_plan} />
-            <Field label="Code Structure" value={project.engineer_output.code_structure} />
-            {Object.keys(project.engineer_output.estimates).length > 0 && (
+            <ListField label="Implementation Plan" items={eng.implementation_plan} />
+            <Field label="Code Structure" value={eng.code_structure} />
+            {Object.keys(eng.estimates ?? {}).length > 0 && (
               <div style={{ marginBottom: "10px" }}>
                 <span style={{ fontSize: "11px", color: "#666680", textTransform: "uppercase" }}>Estimates</span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
-                  {Object.entries(project.engineer_output.estimates).map(([k, v]) => (
+                  {Object.entries(eng.estimates).map(([k, v]) => (
                     <span key={k} style={{ fontSize: "11px", background: "#1a1a26", color: "#9999b0", padding: "3px 8px", borderRadius: "6px" }}>
                       {k}: {v}
                     </span>
@@ -270,24 +281,24 @@ export function ProjectDetail({ project, onClose }: Props) {
                 </div>
               </div>
             )}
-            <ListField label="Dependencies" items={project.engineer_output.dependencies} />
+            <ListField label="Dependencies" items={eng.dependencies} />
           </Section>
 
           {/* Designer Output */}
           <Section title="Designer — UI/UX" color={SECTION_COLORS.designer_output}>
-            <ListField label="Wireframes" items={project.designer_output.wireframes} />
-            <Field label="Design System" value={project.designer_output.design_system} />
-            <ListField label="UX Flows" items={project.designer_output.ux_flows} />
-            <ListField label="Deliverables" items={project.designer_output.deliverables} />
+            <ListField label="Wireframes" items={des.wireframes} />
+            <Field label="Design System" value={des.design_system} />
+            <ListField label="UX Flows" items={des.ux_flows} />
+            <ListField label="Deliverables" items={des.deliverables} />
           </Section>
 
           {/* QA Output */}
           <Section title="QA — Test Plan" color={SECTION_COLORS.qa_output}>
-            <Field label="Test Plan" value={project.qa_output.test_plan} />
-            {(project.qa_output?.test_cases ?? []).length > 0 && (
+            <Field label="Test Plan" value={qa.test_plan} />
+            {qa.test_cases.length > 0 && (
               <div style={{ marginBottom: "10px" }}>
                 <span style={{ fontSize: "11px", color: "#666680", textTransform: "uppercase" }}>Test Cases</span>
-                {(project.qa_output?.test_cases ?? []).map((tc, i) => (
+                {qa.test_cases.map((tc, i) => (
                   <div key={i} style={{ background: "#1a1a26", borderRadius: "8px", padding: "10px", marginTop: "6px" }}>
                     <div style={{ fontSize: "12px", color: "#E67E22", marginBottom: "4px" }}>{tc.name} <span style={{ color: "#666680", fontSize: "11px" }}>({tc.type})</span></div>
                     {(tc.steps ?? []).map((s, j) => (
@@ -297,8 +308,8 @@ export function ProjectDetail({ project, onClose }: Props) {
                 ))}
               </div>
             )}
-            <ListField label="Quality Gates" items={project.qa_output.quality_gates} />
-            <ListField label="Bug Risks" items={project.qa_output.bug_risks} />
+            <ListField label="Quality Gates" items={qa.quality_gates} />
+            <ListField label="Bug Risks" items={qa.bug_risks} />
           </Section>
 
           {/* CEO Review */}
@@ -306,16 +317,16 @@ export function ProjectDetail({ project, onClose }: Props) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div>
                 <span style={{ fontSize: "11px", color: "#666680" }}>Approved</span>
-                <p style={{ fontSize: "13px", color: project.ceo_review.approved ? "#1D9E75" : "#E24B4A" }}>
-                  {project.ceo_review.approved ? "✓ Yes" : "✗ No"}
+                <p style={{ fontSize: "13px", color: ceoRev.approved ? "#1D9E75" : "#E24B4A" }}>
+                  {ceoRev.approved ? "✓ Yes" : "✗ No"}
                 </p>
               </div>
               <div>
                 <span style={{ fontSize: "11px", color: "#666680" }}>Launch Decision</span>
-                <p style={{ fontSize: "13px", color: "#e2e2e8" }}>{project.ceo_review.launch_decision || "—"}</p>
+                <p style={{ fontSize: "13px", color: "#e2e2e8" }}>{ceoRev.launch_decision || "—"}</p>
               </div>
             </div>
-            <Field label="Feedback" value={project.ceo_review.feedback} />
+            <Field label="Feedback" value={ceoRev.feedback} />
           </Section>
 
           {/* Generated Code */}

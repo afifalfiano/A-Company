@@ -54,7 +54,7 @@ export function ProjectBoard({
       <div className="todo-list">
         {projects.map((project) => {
           const phaseColor = PHASE_COLORS[project.current_phase] ?? "#666";
-          const priorityColor = PRIORITY_COLORS[project.ceo_decision.priority] ?? "#666";
+          const priorityColor = PRIORITY_COLORS[project.ceo_decision?.priority] ?? "#666";
           const isSelected = selectedId === project.project_id;
 
           const isPendingPlanning = project.status === "accepted" && !project.planning_approved;
@@ -80,7 +80,7 @@ export function ProjectBoard({
                     className="priority-badge"
                     style={{ background: priorityColor }}
                   >
-                    {project.ceo_decision.priority}
+                    {project.ceo_decision?.priority ?? "—"}
                   </span>
                 </div>
               </div>
@@ -132,11 +132,11 @@ export function ProjectBoard({
               )}
 
               {/* Revision notes */}
-              {project.revision_notes.length > 0 && (
+              {(project.revision_notes?.length ?? 0) > 0 && (
                 <div className="todo-section">
-                  <div className="section-title">Revisions ({project.revision_notes.length})</div>
+                  <div className="section-title">Revisions ({project.revision_notes?.length ?? 0})</div>
                   <ul>
-                    {project.revision_notes.slice(-2).map((n, i) => (
+                    {(project.revision_notes ?? []).slice(-2).map((n, i) => (
                       <li key={i}>{n.slice(0, 80)}{n.length > 80 ? "..." : ""}</li>
                     ))}
                   </ul>
