@@ -112,7 +112,7 @@ export async function handleProcessProject(
     broadcast({ type: "project_update", payload: { project: result.current_project } }, wss, ws);
   } catch (err) {
     console.error("[Graph Error]", err);
-    const failed = { ...project, status: "pending" as const };
+    const failed = { ...project, status: "pending" as const, is_running: false };
     saveProject(failed);
     send(ws, { type: "error", payload: { message: String(err) } });
   }

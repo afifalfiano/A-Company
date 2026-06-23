@@ -39,13 +39,16 @@ const restLimiter = rateLimit({
 });
 app.use(restLimiter);
 
+// ─── Public routes (before auth) ─────────────────────────────────────────────
+
+app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
 // ─── Auth middleware ──────────────────────────────────────────────────────────
 
 app.use(requireApiKey);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/", makeRestRouter());
 
 // ─── HTTP server + WebSocket server ──────────────────────────────────────────
