@@ -4,6 +4,11 @@ import { vi } from "vitest";
 export const mockSend = vi.fn();
 export const mockClose = vi.fn();
 
+// Mock fetch — onopen now calls GET /projects; return empty list by default
+vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+  json: () => Promise.resolve({ projects: [] }),
+}));
+
 const mockWsInstance = {
   readyState: 1,
   send: mockSend,

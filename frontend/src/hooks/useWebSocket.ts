@@ -59,6 +59,19 @@ export function useWebSocket(url: string) {
       isConnectingRef.current = false;
       setConnected(true);
       reconnectAttemptsRef.current = 0;
+      // Restore projects from server on every (re)connect — authoritative source
+      fetch(httpBase + "/projects")
+        .then((r) => r.json())
+        .then((data: { projects?: ProjectItem[] }) => {
+          if (data.projects?.length) {
+            setProjects((prev) => {
+              const byId = new Map(prev.map((p) => [p.project_id, p]));
+              for (const p of data.projects!) byId.set(p.project_id, p);
+              return [...byId.values()];
+            });
+          }
+        })
+        .catch(() => {/* server may not be ready yet, ignore */});
     };
 
     ws.onclose = () => {
@@ -100,14 +113,32 @@ export function useWebSocket(url: string) {
           break;
 
         case "processing_start":
-          setEvents((prev) => [...prev]);
+          setEvents([]);
           setProcessing(true);
           setActiveAgent("ceo");
+          // Add project immediately so it shows in the board during processing
+          if (msg.payload?.project) {
+            setProjects((prev) => {
+              const exists = prev.some((p) => p.project_id === msg.payload.project.project_id);
+              return exists ? prev : [...prev, msg.payload.project];
+            });
+          }
           break;
 
         case "phase_start":
           setProcessing(true);
           setActiveAgent("ceo");
+          if (msg.payload?.project) {
+            setProjects((prev) => {
+              const idx = prev.findIndex((p) => p.project_id === msg.payload.project.project_id);
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = { ...prev[idx], ...msg.payload.project };
+                return next;
+              }
+              return [...prev, msg.payload.project];
+            });
+          }
           break;
 
         case "processing_done":

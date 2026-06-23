@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, unlinkSync, writeFileSync } from "fs";
-import { saveProject, loadProject, getAllProjects } from "./db.js";
+import { saveProject, loadProject, getAllProjects, _clearCache } from "./db.js";
 import type { ProjectItem } from "./state.js";
 
 const TEST_DB = "./data/test-projects.json";
@@ -45,6 +45,7 @@ describe("db", () => {
     originalDbPath = process.env.DB_PATH;
     process.env.DB_PATH = TEST_DB;
     if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
+    _clearCache(); // reset in-memory store for test isolation
   });
   afterEach(() => {
     if (existsSync(TEST_DB)) unlinkSync(TEST_DB);

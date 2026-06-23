@@ -97,6 +97,59 @@ describe("useWebSocket", () => {
     });
   });
 
+  it("adds project to list on processing_start", async () => {
+    const { result } = renderHook(() => useWebSocket("ws://localhost:3001"));
+    const project = {
+      project_id: "test-1",
+      project_title: "Test",
+      project_description: "Desc",
+      current_phase: "intake",
+      status: "pending",
+    };
+    act(() => {
+      mockWsInstance.onmessage?.({
+        data: JSON.stringify({ type: "processing_start", payload: { project } }),
+      } as MessageEvent);
+    });
+    await waitFor(() => {
+      expect(result.current.projects.some((p) => p.project_id === "test-1")).toBe(true);
+    });
+  });
+
+  it("clears events on processing_start for a new run", async () => {
+    const { result } = renderHook(() => useWebSocket("ws://localhost:3001"));
+    // First add an event
+    act(() => {
+      mockWsInstance.onmessage?.({
+        data: JSON.stringify({
+          type: "agent_event",
+          payload: { agent: "ceo", phase: "intake", status: "done", message: "old", timestamp: 1 },
+        }),
+      } as MessageEvent);
+    });
+    await waitFor(() => expect(result.current.events).toHaveLength(1));
+    // Now processing_start should clear events
+    act(() => {
+      mockWsInstance.onmessage?.({
+        data: JSON.stringify({ type: "processing_start", payload: { project: { project_id: "new-1" } } }),
+      } as MessageEvent);
+    });
+    await waitFor(() => expect(result.current.events).toHaveLength(0));
+  });
+
+  it("adds project on phase_start if not in list", async () => {
+    const { result } = renderHook(() => useWebSocket("ws://localhost:3001"));
+    const project = { project_id: "ph-1", project_title: "Phase test", current_phase: "planning", status: "in_progress" };
+    act(() => {
+      mockWsInstance.onmessage?.({
+        data: JSON.stringify({ type: "phase_start", payload: { project, phase: "planning" } }),
+      } as MessageEvent);
+    });
+    await waitFor(() => {
+      expect(result.current.projects.some((p) => p.project_id === "ph-1")).toBe(true);
+    });
+  });
+
   it("clears projects", () => {
     const { result } = renderHook(() => useWebSocket("ws://localhost:3001"));
     act(() => {

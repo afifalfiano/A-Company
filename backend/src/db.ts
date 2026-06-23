@@ -2,39 +2,54 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import type { ProjectItem } from "./state.js";
 
-type Store = Record<string, ProjectItem>;
-
 function dbPath(): string {
   return process.env.DB_PATH ?? "./data/projects.json";
 }
 
-function load(): Store {
+// In-memory store as source of truth — eliminates load/save races across await boundaries.
+// File is read once on first access per path, then all reads/writes go through memStore.
+let cachedPath: string | null = null;
+const memStore = new Map<string, ProjectItem>();
+
+function ensureLoaded(): void {
   const p = dbPath();
-  if (!existsSync(p)) return {};
+  if (cachedPath === p) return;
+  memStore.clear();
+  cachedPath = p;
+  if (!existsSync(p)) return;
   try {
-    return JSON.parse(readFileSync(p, "utf-8")) as Store;
+    const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, ProjectItem>;
+    for (const [k, v] of Object.entries(raw)) memStore.set(k, v);
   } catch (err) {
     console.error(`[db] Failed to parse ${p}:`, err);
-    return {};
   }
 }
 
-function persist(store: Store): void {
+function persist(): void {
   const p = dbPath();
   mkdirSync(dirname(p), { recursive: true });
-  writeFileSync(p, JSON.stringify(store, null, 2), "utf-8");
+  const obj: Record<string, ProjectItem> = Object.fromEntries(memStore);
+  writeFileSync(p, JSON.stringify(obj, null, 2), "utf-8");
 }
 
 export function saveProject(project: ProjectItem): void {
-  const store = load();
-  store[project.project_id] = project;
-  persist(store);
+  ensureLoaded();
+  memStore.set(project.project_id, project);
+  persist();
 }
 
 export function loadProject(id: string): ProjectItem | undefined {
-  return load()[id];
+  ensureLoaded();
+  return memStore.get(id);
 }
 
 export function getAllProjects(): ProjectItem[] {
-  return Object.values(load());
+  ensureLoaded();
+  return [...memStore.values()];
+}
+
+// For testing only — forces a reload from disk on next access.
+export function _clearCache(): void {
+  cachedPath = null;
+  memStore.clear();
 }
