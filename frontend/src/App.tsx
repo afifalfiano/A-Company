@@ -7,11 +7,22 @@ import { CodeGenModal } from "./components/CodeGenModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AgentName } from "./models";
 
-const EXAMPLE_PROJECTS = [
-  "Create landing page (no server, no database)",
-  "Real-time inventory system for warehouse",
-  "Mobile app for meeting room booking",
-  "Analytics dashboard for e-commerce",
+type Platform = "web" | "mobile" | "both";
+type Budget = "small" | "medium" | "large";
+
+type ExampleProject = {
+  title: string;
+  platform: Platform;
+  targetUsers: string;
+  features: string;
+  budget: Budget;
+};
+
+const EXAMPLE_PROJECTS: ExampleProject[] = [
+  { title: "Landing page", platform: "web", targetUsers: "Potential customers", features: "Hero section, features list, pricing table, contact form", budget: "small" },
+  { title: "Real-time inventory system", platform: "web", targetUsers: "Warehouse staff and managers", features: "Stock tracking, low-stock alerts, barcode scanning, reporting dashboard", budget: "medium" },
+  { title: "Meeting room booking app", platform: "mobile", targetUsers: "Office employees", features: "Room availability calendar, instant booking, conflict detection, push notifications", budget: "medium" },
+  { title: "E-commerce analytics dashboard", platform: "web", targetUsers: "Marketing and sales teams", features: "Sales charts, conversion funnel, customer segments, CSV export", budget: "large" },
 ];
 
 export default function App() {
@@ -21,23 +32,47 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState("");
-  const [descInput, setDescInput] = useState("");
+  const [platform, setPlatform] = useState<Platform>("web");
+  const [targetUsers, setTargetUsers] = useState("");
+  const [features, setFeatures] = useState("");
+  const [budget, setBudget] = useState<Budget>("medium");
   const [codeGenProjectId, setCodeGenProjectId] = useState<string | null>(null);
 
   const selectedProject = projects.find((p) => p.project_id === selectedId) ?? null;
   const detailProject = projects.find((p) => p.project_id === detailProjectId) ?? null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!titleInput.trim() || processing || !connected) return;
-    sendProject(titleInput.trim(), descInput.trim());
+  const buildDescription = () =>
+    [
+      `Platform: ${platform}`,
+      targetUsers.trim() ? `Target users: ${targetUsers.trim()}` : null,
+      features.trim() ? `Key features: ${features.trim()}` : null,
+      `Budget: ${budget}`,
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+  const resetForm = () => {
     setTitleInput("");
-    setDescInput("");
+    setPlatform("web");
+    setTargetUsers("");
+    setFeatures("");
+    setBudget("medium");
   };
 
-  const handleExample = (text: string) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!titleInput.trim() || !features.trim() || processing || !connected) return;
+    sendProject(titleInput.trim(), buildDescription());
+    resetForm();
+  };
+
+  const handleExample = (ex: ExampleProject) => {
     if (processing || !connected) return;
-    sendProject(text, "");
+    setTitleInput(ex.title);
+    setPlatform(ex.platform);
+    setTargetUsers(ex.targetUsers);
+    setFeatures(ex.features);
+    setBudget(ex.budget);
   };
 
   return (
@@ -58,32 +93,78 @@ export default function App() {
       </header>
 
       <div className="input-section">
-        <form onSubmit={handleSubmit} className="input-form">
-          <input
-            value={titleInput}
-            onChange={(e) => setTitleInput(e.target.value)}
-            placeholder="Project title..."
-            disabled={processing || !connected}
-            autoFocus
-          />
-          <input
-            value={descInput}
-            onChange={(e) => setDescInput(e.target.value)}
-            placeholder="Description (optional)"
-            disabled={processing || !connected}
-          />
-          <button type="submit" disabled={processing || !connected || !titleInput.trim()} className="btn-primary">
-            {processing ? (
-              <><span className="spinner-sm" /> Processing...</>
-            ) : "Process Project"}
-          </button>
+        <form onSubmit={handleSubmit} className="intake-form">
+          <div className="intake-row">
+            <input
+              className="intake-title"
+              value={titleInput}
+              onChange={(e) => setTitleInput(e.target.value)}
+              placeholder="Project title (required)"
+              disabled={processing || !connected}
+              autoFocus
+            />
+          </div>
+
+          <div className="intake-row intake-row--split">
+            <div className="intake-field">
+              <label className="intake-label">Platform</label>
+              <div className="chip-group">
+                {(["web", "mobile", "both"] as Platform[]).map((p) => (
+                  <button key={p} type="button"
+                    className={`chip ${platform === p ? "chip--active" : ""}`}
+                    onClick={() => setPlatform(p)}
+                    disabled={processing || !connected}
+                  >{p}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="intake-field">
+              <label className="intake-label">Budget</label>
+              <div className="chip-group">
+                {(["small", "medium", "large"] as Budget[]).map((b) => (
+                  <button key={b} type="button"
+                    className={`chip ${budget === b ? "chip--active" : ""}`}
+                    onClick={() => setBudget(b)}
+                    disabled={processing || !connected}
+                  >{b}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="intake-row">
+            <input
+              className="intake-input"
+              value={targetUsers}
+              onChange={(e) => setTargetUsers(e.target.value)}
+              placeholder="Who will use this? (e.g. warehouse staff, marketing team)"
+              disabled={processing || !connected}
+            />
+          </div>
+
+          <div className="intake-row intake-row--submit">
+            <textarea
+              className="intake-textarea"
+              value={features}
+              onChange={(e) => setFeatures(e.target.value)}
+              placeholder="Key features — what should it do? (required)"
+              rows={3}
+              disabled={processing || !connected}
+            />
+            <button type="submit" disabled={processing || !connected || !titleInput.trim() || !features.trim()} className="btn-primary btn-submit">
+              {processing ? (
+                <><span className="spinner-sm" /> Processing...</>
+              ) : "Process Project"}
+            </button>
+          </div>
         </form>
 
         <div className="examples">
           <span className="examples-label">Examples:</span>
           {EXAMPLE_PROJECTS.map((ex, i) => (
             <button key={i} className="example-chip" onClick={() => handleExample(ex)} disabled={processing || !connected}>
-              {ex}
+              {ex.title}
             </button>
           ))}
         </div>
