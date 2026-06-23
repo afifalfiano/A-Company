@@ -1,0 +1,14 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY backend/package*.json ./
+RUN npm install --legacy-peer-deps
+
+COPY backend/ ./
+
+RUN mkdir -p data generated
+
+EXPOSE 3001
+
+CMD ["npx", "tsx", "src/index.ts"]
