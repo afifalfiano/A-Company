@@ -1,14 +1,23 @@
+function sanitizeJsonStrings(s: string): string {
+  // Replace literal newlines/tabs inside JSON string values — LLMs often emit these
+  return s.replace(/"(?:[^"\\]|\\.)*"/g, (m) =>
+    m.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
+  );
+}
+
 export function parseAgentResponse(content: string): unknown {
-  // Strip LangChain think blocks
+  // Strip think/thinking blocks and markdown fences
   let cleaned = content
     .replace(/<think>[\s\S]*?<\/think>/g, "")
-    .replace(/```json|```/g, "")
+    .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
+    .replace(/```json\s*/g, "")
+    .replace(/```\s*/g, "")
     .trim();
 
-  // Strip leading markdown headers or thinking labels like "# Response" or "## Analysis"
+  // Strip leading markdown headers
   cleaned = cleaned.replace(/^#+\s*[\w\s]*\n?/gm, "").trim();
 
-  // Find first valid JSON object or array
+  // Find first JSON object or array
   const firstBrace = cleaned.indexOf("{");
   const firstBracket = cleaned.indexOf("[");
   let start = -1;
@@ -24,40 +33,37 @@ export function parseAgentResponse(content: string): unknown {
     cleaned = cleaned.slice(start);
   }
 
-  try {
-    return JSON.parse(cleaned);
-  } catch (e) {
-    // Try a greedy approach: extract first balanced {...} or [...]
-    let best = "";
-    let bestEnd = -1;
-    for (let i = 0; i < cleaned.length; i++) {
-      const c = cleaned[i];
-      if (c === "{" || c === "[") {
-        const open = c === "{" ? "}" : "]";
-        let depth = 1;
-        let j = i + 1;
-        while (j < cleaned.length && depth > 0) {
-          const ch = cleaned[j];
-          if (ch === open) depth--;
-          else if (ch === c) depth++;
-          j++;
-        }
-        if (depth === 0) {
-          const candidate = cleaned.slice(i, j);
-          if (candidate.length > best.length) {
-            best = candidate;
-            bestEnd = j;
-          }
-        }
+  // Attempt 1: direct parse
+  try { return JSON.parse(cleaned); } catch { /* fall through */ }
+
+  // Attempt 2: sanitize literal newlines in strings, then parse
+  try { return JSON.parse(sanitizeJsonStrings(cleaned)); } catch { /* fall through */ }
+
+  // Attempt 3: greedy bracket extraction
+  let best = "";
+  for (let i = 0; i < cleaned.length; i++) {
+    const c = cleaned[i];
+    if (c === "{" || c === "[") {
+      const close = c === "{" ? "}" : "]";
+      let depth = 1;
+      let j = i + 1;
+      while (j < cleaned.length && depth > 0) {
+        if (cleaned[j] === close) depth--;
+        else if (cleaned[j] === c) depth++;
+        j++;
+      }
+      if (depth === 0) {
+        const candidate = cleaned.slice(i, j);
+        if (candidate.length > best.length) best = candidate;
       }
     }
-    if (best) {
-      try {
-        return JSON.parse(best);
-      } catch {
-        throw new Error(`JSON parse failed. Content preview: ${cleaned.slice(0, 200)}`);
-      }
-    }
-    throw new Error(`JSON parse failed. No valid JSON found. Content preview: ${cleaned.slice(0, 200)}`);
   }
+
+  if (best) {
+    // Attempt 4: parse extracted block + sanitize
+    try { return JSON.parse(best); } catch { /* fall through */ }
+    try { return JSON.parse(sanitizeJsonStrings(best)); } catch { /* fall through */ }
+  }
+
+  throw new Error(`JSON parse failed. Content preview: ${cleaned.slice(0, 200)}`);
 }
