@@ -17,6 +17,7 @@ export class WsRateLimiter {
     const now = Date.now();
     const entry = this.store.get(ip);
     if (!entry || now >= entry.resetAt) {
+      this.store.delete(ip);
       this.store.set(ip, { count: 1, resetAt: now + this.windowMs });
       return true;
     }
