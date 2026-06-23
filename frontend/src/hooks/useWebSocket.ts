@@ -10,8 +10,6 @@ import {
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY_MS = 1000;
 
-const STORAGE_KEY = "acompany_projects";
-
 export function useWebSocket(url: string) {
   // ws://host → http://host, wss://host → https://host
   const httpBase = url.replace(/^ws/, "http");
@@ -22,14 +20,7 @@ export function useWebSocket(url: string) {
   const isConnectingRef = useRef(false);
   const [connected, setConnected] = useState(false);
   const [events, setEvents] = useState<AgentEvent[]>([]);
-  const [projects, setProjects] = useState<ProjectItem[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [processing, setProcessing] = useState(false);
   const [activeAgent, setActiveAgent] = useState<AgentName | null>(null);
   const [pendingGate, setPendingGate] = useState<{ projectId: string; type: "planning" | "execution" } | null>(null);
@@ -37,15 +28,6 @@ export function useWebSocket(url: string) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingProjectId, setGeneratingProjectId] = useState<string | null>(null);
   const [zipUrl, setZipUrl] = useState<string | null>(null);
-
-  // Persist projects to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    } catch (e) {
-      console.warn("[WS] Failed to persist projects:", e);
-    }
-  }, [projects]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
