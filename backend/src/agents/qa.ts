@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, QaOutput } from "../state.js";
+import { CompanyStateType, AgentEvent, QaOutput, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -134,9 +134,8 @@ Project: ${project.project_title}
 
   return {
     current_project: {
-      ...state.current_project,
       qa_output: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "qa" as const,

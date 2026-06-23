@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, EngineerOutput } from "../state.js";
+import { CompanyStateType, AgentEvent, EngineerOutput, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -61,12 +61,25 @@ export async function engineerAgent(
     timestamp: Date.now(),
   });
 
+  const poStories = project.product_owner_output?.user_stories
+    ?.slice(0, 5)
+    .map((s) => `- As a ${s.as}, I want ${s.want}`)
+    .join("\n") ?? "";
+
+  const pmPriority = project.product_manager_output?.feature_priority?.join(", ") ?? "";
+
   const context = `
 CTO Architecture Decision:
 - Architecture: ${ctoOutput.architecture}
 - Tech Stack: ${ctoOutput.tech_stack.join(", ")}
 - System Design: ${ctoOutput.system_design}
 - Technical Risks: ${ctoOutput.technical_risks.join(" | ")}
+
+Product Owner — Top User Stories:
+${poStories || "Not available"}
+
+Product Manager — Feature Priority:
+${pmPriority || "Not available"}
 
 Project: ${project.project_title}
 Description: ${project.project_description}
@@ -125,9 +138,8 @@ Description: ${project.project_description}
 
   return {
     current_project: {
-      ...state.current_project,
       engineer_output: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "engineer" as const,

@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent } from "../state.js";
+import { CompanyStateType, AgentEvent, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 import { writeProjectFiles } from "../generators/index.js";
@@ -125,13 +125,12 @@ Design System: ${design_system}`;
 
   return {
     current_project: {
-      ...state.current_project,
       design_gen: {
         generated_at: Date.now(),
         file_count: files.length,
         output_path: outputPath,
       },
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "design_generator" as const,

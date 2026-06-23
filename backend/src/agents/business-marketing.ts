@@ -1,5 +1,5 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { CompanyStateType, AgentEvent, BusinessMarketingOutput } from "../state.js";
+import { CompanyStateType, AgentEvent, BusinessMarketingOutput, ProjectItem } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 
@@ -51,10 +51,19 @@ export async function businessMarketingAgent(
     timestamp: Date.now(),
   });
 
+  if (project.complexity === "low") {
+    emit({ agent: "business_marketing", phase: "planning", status: "done", message: "Skipped (low complexity)", timestamp: Date.now() });
+    return { current_project: { business_marketing_output: FALLBACK_BM_OUTPUT } as ProjectItem, agent_events: [] };
+  }
+
+  const ctoContext = project.cto_output?.architecture
+    ? `\n\nCTO Architecture: ${project.cto_output.architecture}\nTech Stack: ${project.cto_output.tech_stack.join(", ")}`
+    : "";
+
   const model = getModel(0.5);
   const response = await model.invoke([
     new SystemMessage(SYSTEM),
-    new HumanMessage(`Project: ${title}\n\nDescription: ${description}`),
+    new HumanMessage(`Project: ${title}\n\nDescription: ${description}${ctoContext}`),
   ]);
 
   const usage = response.usage_metadata as { input_tokens?: number; output_tokens?: number } ?? {};
@@ -102,9 +111,8 @@ export async function businessMarketingAgent(
 
   return {
     current_project: {
-      ...state.current_project,
       business_marketing_output: data,
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "business_marketing" as const,

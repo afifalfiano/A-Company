@@ -1,6 +1,6 @@
 import { StateGraph, END, START } from "@langchain/langgraph";
-import { CompanyState, CompanyStateType, AgentEvent, ProjectPhase } from "./state.js";
-import { ceoIntake, ceoReview } from "./agents/ceo.js";
+import { CompanyState, CompanyStateType, AgentEvent, ProjectPhase, ProjectItem } from "./state.js";
+import { ceoIntake, deterministicReview } from "./agents/ceo.js";
 import { ctoAgent } from "./agents/cto.js";
 import { productOwnerAgent } from "./agents/product-owner.js";
 import { productManagerAgent } from "./agents/product-manager.js";
@@ -44,18 +44,17 @@ async function withRetry(
         totalOutput += tu.output_tokens;
       }
 
-      // Clear failed_agent on success
       return {
         ...result,
-        current_project: result.current_project ? {
-          ...result.current_project,
+        current_project: {
+          ...(result.current_project ?? {}),
           retry_count: 0,
           failed_agent: null,
           token_usage: currentUsage,
           total_input_tokens: totalInput,
           total_output_tokens: totalOutput,
           total_tokens: totalInput + totalOutput,
-        } : undefined,
+        } as ProjectItem,
       };
     } catch (err) {
       lastError = err;
@@ -78,20 +77,15 @@ async function withRetry(
     message: `Failed after ${MAX_RETRIES} retries: ${String(lastError).slice(0, 80)}`,
     timestamp: Date.now(),
   });
-  // All retries exhausted — preserve accumulated token usage
-  const accumulatedUsage = state.current_project.token_usage ?? {};
-  let totalIn = state.current_project.total_input_tokens ?? 0;
-  let totalOut = state.current_project.total_output_tokens ?? 0;
   return {
     current_project: {
-      ...state.current_project,
-      retry_count: state.current_project.retry_count + 1,
+      retry_count: (state.current_project.retry_count ?? 0) + 1,
       failed_agent: agentName,
-      token_usage: accumulatedUsage,
-      total_input_tokens: totalIn,
-      total_output_tokens: totalOut,
-      total_tokens: totalIn + totalOut,
-    },
+      token_usage: state.current_project.token_usage ?? {},
+      total_input_tokens: state.current_project.total_input_tokens ?? 0,
+      total_output_tokens: state.current_project.total_output_tokens ?? 0,
+      total_tokens: state.current_project.total_tokens ?? 0,
+    } as ProjectItem,
   };
 }
 
@@ -139,10 +133,6 @@ function planningRouter(state: CompanyStateType) {
   return "cto";
 }
 
-function executionRouter(_state: CompanyStateType) {
-  return "engineer";
-}
-
 // ─── Graph ────────────────────────────────────────────────────────────────────
 
 export function buildGraph(emit: (event: AgentEvent) => void) {
@@ -159,7 +149,8 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("engineer",         (state: CompanyStateType) => withRetry("engineer",         engineerAgent,          state, emit));
   graph.addNode("designer",          (state: CompanyStateType) => withRetry("designer",         designerAgent,          state, emit));
   graph.addNode("qa",               (state: CompanyStateType) => withRetry("qa",               qaAgent,                state, emit));
-  graph.addNode("ceo_review",        (state: CompanyStateType) => ceoReview(state, emit));
+  graph.addNode("execution_router", (_state: CompanyStateType) => ({}));
+  graph.addNode("ceo_review",        (state: CompanyStateType) => deterministicReview(state, emit));
   graph.addNode("finalize", (state: CompanyStateType) => {
     const proj = state.current_project;
     console.log("[Finalize] called — status:", proj.status, "| current_phase:", proj.current_phase, "| execution_approved:", proj.execution_approved, "| planning_approved:", proj.planning_approved);
@@ -210,32 +201,27 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
     { finalize: "finalize", cto: "cto" }
   );
 
-  // Planning chain (CTO → PO → PM → BM → execution_checkpoint)
+  // Planning: CTO fans-out to PO + PM + BM in parallel
   graph.addEdge("cto", "product_owner");
-  graph.addEdge("product_owner", "product_manager");
-  graph.addEdge("product_manager", "business_marketing");
+  graph.addEdge("cto", "product_manager");
+  graph.addEdge("cto", "business_marketing");
+
+  // All three fan-in to execution_checkpoint
+  graph.addEdge("product_owner", "execution_checkpoint");
+  graph.addEdge("product_manager", "execution_checkpoint");
   graph.addEdge("business_marketing", "execution_checkpoint");
 
-  // Execution checkpoint — human gate before running execution agents
-  // Reject → sends back to engineer (incomplete, needs revision)
-  // Approve → continues to designer
+  // execution_checkpoint → execution_router → [engineer || designer] in parallel
   graph.addConditionalEdges(
     "execution_checkpoint",
-    (state: CompanyStateType) => {
-      // Check if execution was explicitly rejected via approve_execution
-      // Project moves to execution phase only when user explicitly rejects
-      // First run auto-approves (execution_approved: true set in index.ts)
-      if (state.current_project.execution_approved === false &&
-          state.current_project.current_phase === "execution") {
-        return "engineer"; // Rejected → re-run engineer with revision notes
-      }
-      return "engineer"; // Auto-approved → run engineer
-    },
-    { engineer: "engineer" }
+    (_state: CompanyStateType) => "execution_router",
+    { execution_router: "execution_router" }
   );
+  graph.addEdge("execution_router", "engineer");
+  graph.addEdge("execution_router", "designer");
 
-  // Engineer → Designer → QA (full sequence regardless of complexity)
-  graph.addEdge("engineer", "designer");
+  // Both fan-in to qa
+  graph.addEdge("engineer", "qa");
   graph.addEdge("designer", "qa");
 
   // QA → CEO Review → Finalize → END (no auto code-gen)
