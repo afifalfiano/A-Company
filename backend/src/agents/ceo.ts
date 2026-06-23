@@ -143,117 +143,36 @@ export async function ceoIntake(
   };
 }
 
-const SYSTEM_REVIEW = `You are the CEO of A-Company doing final review.
-Review all team outputs (CTO, PO, PM, Engineer, Designer, QA) and decide if project is ready to launch.
-Decision: approved=true if all phases went well, false if there are critical issues.
-Feedback: explain the reasoning and things to watch out for.`;
-
-export async function ceoReview(
+export function deterministicReview(
   state: CompanyStateType,
   emit: (event: AgentEvent) => void
-) {
-  emit({
-    agent: "ceo",
-    phase: "review",
-    status: "started",
-    message: "CEO conducting final review...",
-    timestamp: Date.now(),
-  });
+): Partial<CompanyStateType> {
+  const p = state.current_project;
+  const allDone =
+    p.engineer_output.implementation_plan.length > 0 &&
+    p.designer_output.wireframes.length > 0 &&
+    p.qa_output.test_cases.length > 0;
 
-  emit({
-    agent: "ceo",
-    phase: "review",
-    status: "thinking",
-    message: "Reviewing all agent outputs...",
-    timestamp: Date.now(),
-  });
-
-  const project = state.current_project;
-  const summary = `
-Project: ${project.project_title}
-
-CTO Output:
-- Architecture: ${project.cto_output.architecture}
-- Tech Stack: ${project.cto_output.tech_stack.join(", ")}
-
-Product Owner:
-- ${project.product_owner_output.user_stories.length} user stories
-- Sprint: ${project.product_owner_output.sprint_plan}
-
-Product Manager:
-- Strategy: ${project.product_manager_output.strategy}
-- Feature Priority: ${project.product_manager_output.feature_priority.join(", ")}
-
-Engineer:
-- ${project.engineer_output.implementation_plan.length} implementation steps
-
-Designer:
-- ${project.designer_output.deliverables.length} design deliverables
-
-QA:
-- ${project.qa_output.test_cases.length} test cases planned
-  `.trim();
-
-  const model = getModel(0.2);
-  const response = await model.invoke([
-    new SystemMessage(SYSTEM_REVIEW),
-    new HumanMessage(summary),
-  ]);
-
-  const usage = response.usage_metadata as { input_tokens?: number; output_tokens?: number } ?? {};
-  const inputTokens = usage.input_tokens ?? 0;
-  const outputTokens = usage.output_tokens ?? 0;
-  emit({
-    agent: "ceo",
-    phase: "review",
-    status: "token_usage",
-    message: `Tokens: ${inputTokens} in / ${outputTokens} out`,
-    timestamp: Date.now(),
-    token_usage: { input_tokens: inputTokens, output_tokens: outputTokens },
-  });
-
-  const raw = (response.content as string).trim();
-  console.log("[CEO Review] raw LLM response:", raw);
-  let data: { approved: boolean; feedback: string; launch_decision: string };
-  try {
-    data = parseAgentResponse(raw) as typeof data;
-  } catch {
-    data = {
-      approved: true,
-      feedback: "Auto-approved - all phases completed",
-      launch_decision: "ready_for_deployment",
-    };
-  }
-
-  // Guard: if review rejected but gave no feedback, treat as auto-approved
-  // (all phases completed successfully, should not hold up delivery)
-  if (data.approved === false && (!data.feedback || data.feedback.trim().length === 0)) {
-    console.warn("[CEO Review] Rejected with empty feedback — auto-approving since all phases completed.");
-    data = {
-      approved: true,
-      feedback: "Auto-approved — review response was ambiguous. All phases completed successfully.",
-      launch_decision: "ready_for_deployment",
-    };
-  }
+  const review = allDone
+    ? { approved: true, feedback: "All phases completed successfully", launch_decision: "ready_for_deployment" }
+    : { approved: false, feedback: "One or more phases produced no output", launch_decision: "needs_revision" };
 
   emit({
     agent: "ceo",
     phase: "review",
     status: "done",
-    message: data.approved ? "APPROVED for launch" : "NEEDS REVISION",
+    message: review.approved ? "APPROVED for launch" : "NEEDS REVISION",
     timestamp: Date.now(),
   });
 
   return {
-    current_project: {
-      ceo_review: { ...data },
-    } as ProjectItem,
+    current_project: { ceo_review: review } as ProjectItem,
     agent_events: [
       {
         agent: "ceo" as const,
         phase: "review" as const,
         status: "done" as const,
-        message: data.approved ? `Approved - ${data.feedback}` : `Needs revision - ${data.feedback}`,
+        message: review.approved ? `Approved - ${review.feedback}` : `Needs revision - ${review.feedback}`,
         timestamp: Date.now(),
       },
     ],

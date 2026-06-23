@@ -1,6 +1,6 @@
 import { StateGraph, END, START } from "@langchain/langgraph";
 import { CompanyState, CompanyStateType, AgentEvent, ProjectPhase, ProjectItem } from "./state.js";
-import { ceoIntake, ceoReview } from "./agents/ceo.js";
+import { ceoIntake, deterministicReview } from "./agents/ceo.js";
 import { ctoAgent } from "./agents/cto.js";
 import { productOwnerAgent } from "./agents/product-owner.js";
 import { productManagerAgent } from "./agents/product-manager.js";
@@ -153,7 +153,7 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("engineer",         (state: CompanyStateType) => withRetry("engineer",         engineerAgent,          state, emit));
   graph.addNode("designer",          (state: CompanyStateType) => withRetry("designer",         designerAgent,          state, emit));
   graph.addNode("qa",               (state: CompanyStateType) => withRetry("qa",               qaAgent,                state, emit));
-  graph.addNode("ceo_review",        (state: CompanyStateType) => ceoReview(state, emit));
+  graph.addNode("ceo_review",        (state: CompanyStateType) => deterministicReview(state, emit));
   graph.addNode("finalize", (state: CompanyStateType) => {
     const proj = state.current_project;
     console.log("[Finalize] called — status:", proj.status, "| current_phase:", proj.current_phase, "| execution_approved:", proj.execution_approved, "| planning_approved:", proj.planning_approved);
@@ -204,10 +204,14 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
     { finalize: "finalize", cto: "cto" }
   );
 
-  // Planning chain (CTO → PO → PM → BM → execution_checkpoint)
+  // Planning: CTO fans-out to PO + PM + BM in parallel
   graph.addEdge("cto", "product_owner");
-  graph.addEdge("product_owner", "product_manager");
-  graph.addEdge("product_manager", "business_marketing");
+  graph.addEdge("cto", "product_manager");
+  graph.addEdge("cto", "business_marketing");
+
+  // All three fan-in to execution_checkpoint
+  graph.addEdge("product_owner", "execution_checkpoint");
+  graph.addEdge("product_manager", "execution_checkpoint");
   graph.addEdge("business_marketing", "execution_checkpoint");
 
   // Execution checkpoint — human gate before running execution agents
