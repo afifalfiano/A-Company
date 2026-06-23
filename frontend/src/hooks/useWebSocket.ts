@@ -13,6 +13,9 @@ const RECONNECT_BASE_DELAY_MS = 1000;
 const STORAGE_KEY = "acompany_projects";
 
 export function useWebSocket(url: string) {
+  // ws://host → http://host, wss://host → https://host
+  const httpBase = url.replace(/^ws/, "http");
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -164,7 +167,7 @@ export function useWebSocket(url: string) {
           break;
 
         case "code_gen_download_ready":
-          setZipUrl(msg.payload.zip_url);
+          setZipUrl(httpBase + msg.payload.zip_url);
           break;
 
         case "code_gen_error":

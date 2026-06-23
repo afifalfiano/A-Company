@@ -20,10 +20,9 @@ export function CodeGenModal({
 }: Props) {
   const [mode, setMode] = useState<CodeGenMode>("monolith");
 
-  // Reconstruct download URL from stored zip_path if zipUrl not in memory
   const downloadUrl = zipUrl ?? (project.generated_code?.zip_path
-        ? `http://localhost:3001/download/${project.project_id}`
-        : null);
+    ? `http://localhost:3001/download/${project.project_id}`
+    : null);
 
   return (
     <div
@@ -99,7 +98,10 @@ export function CodeGenModal({
               {project.generated_code && ` (${project.generated_code.file_count} files)`}
             </p>
             <a
-              href={downloadUrl}
+              href={downloadUrl!}
+              download
+              target="_blank"
+              rel="noreferrer"
               style={{
                 display: "inline-block",
                 background: "#7F77DD",
