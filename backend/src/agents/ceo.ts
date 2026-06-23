@@ -246,9 +246,8 @@ QA:
 
   return {
     current_project: {
-      ...state.current_project,
       ceo_review: { ...data },
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "ceo" as const,

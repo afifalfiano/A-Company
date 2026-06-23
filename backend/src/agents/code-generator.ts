@@ -3,6 +3,7 @@ import {
   CompanyStateType,
   AgentEvent,
   CodeGenMode,
+  ProjectItem,
 } from "../state.js";
 import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
@@ -151,14 +152,13 @@ Mode: ${mode}`;
 
   return {
     current_project: {
-      ...state.current_project,
       generated_code: {
         generated_at: Date.now(),
         mode,
         file_count: files.length,
         zip_path: zipPath,
       },
-    },
+    } as ProjectItem,
     agent_events: [
       {
         agent: "code_generator" as const,
