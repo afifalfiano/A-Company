@@ -2,3 +2,6 @@
 
 # Generated code output — never commit
 backend/generated/
+backend/generated-designs/
+frontend/playwright-report/
+frontend/test-results/

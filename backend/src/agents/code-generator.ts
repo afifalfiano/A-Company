@@ -9,6 +9,18 @@ import { getModel } from "../state.js";
 import { parseAgentResponse } from "./utils/utils.js";
 import { writeProjectFiles, createZipArchive } from "../generators/index.js";
 
+function parseDelimiterFormat(raw: string): Array<{ path: string; content: string }> {
+  const files: Array<{ path: string; content: string }> = [];
+  const pattern = /===FILE:\s*([^\n]+?)\s*===\n([\s\S]*?)===END===/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(raw)) !== null) {
+    const path = match[1].trim();
+    const content = match[2];
+    if (path) files.push({ path, content });
+  }
+  return files;
+}
+
 const FALLBACK_FILES = [
   { path: "package.json", content: "{\n  \"name\": \"generated-project\",\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"tsx watch src/index.ts\",\n    \"build\": \"tsc\",\n    \"start\": \"node dist/index.js\"\n  },\n  \"dependencies\": {},\n  \"devDependencies\": {\n    \"typescript\": \"^5.0.0\",\n    \"tsx\": \"^4.21.0\",\n    \"@types/node\": \"^20.0.0\"\n  }\n}\n" },
   { path: "tsconfig.json", content: "{\n  \"compilerOptions\": {\n    \"target\": \"ES2022\",\n    \"module\": \"NodeNext\",\n    \"moduleResolution\": \"NodeNext\",\n    \"outDir\": \"dist\",\n    \"rootDir\": \"src\",\n    \"strict\": true,\n    \"esModuleInterop\": true\n  },\n  \"include\": [\"src\"]\n}\n" },
@@ -52,39 +64,60 @@ export async function codeGeneratorAgent(
     timestamp: Date.now(),
   });
 
-  const model = getModel(0.2, 8192);
+  const model = getModel(0.2, 16000);
 
-  const systemPrompt = `You are an expert full-stack software engineer. Generate a complete, production-quality, runnable project as a JSON array of file objects.
+  const systemPrompt = `You are an expert full-stack software engineer. Generate a complete, production-quality, runnable project using the EXACT format below.
 
-CRITICAL: Output ONLY a valid JSON array. No prose, no markdown, no code fences. Start with [ and end with ].
-Format: [{"path": "relative/path/file.ext", "content": "full file content here"}, ...]
+OUTPUT FORMAT — follow precisely, no deviations:
 
-Requirements:
-- Paths relative to project root, no leading slash
-- TypeScript everywhere
-- All imports use correct relative paths
-- package.json: include ALL dependencies + scripts: dev/build/start/test
-- .env.example: every env var referenced in code
-- Code must be syntactically correct, complete, runnable — NO placeholders, NO "// TODO", NO stub functions
-- README.md: project title, description, setup steps (npm install && npm run dev), env vars
+===FILE: relative/path/to/file.ext===
+full file content goes here
+(may span multiple lines)
+===END===
 
-File structure (monolith):
-  package.json, tsconfig.json, .env.example, README.md
-  src/index.ts (entry point — boots the server/app)
-  src/routes/ (one file per resource)
-  src/models/ (data models / schemas)
-  src/services/ (business logic)
-  src/middleware/ (auth, validation, error handling)
-  src/types/ (shared TypeScript interfaces)
-  If it is a web app / landing page: also include src/public/index.html + src/public/styles.css with real HTML/CSS content
+===FILE: another/file.ext===
+...content...
+===END===
 
-File structure (monorepo):
-  package.json (workspaces), tsconfig.json, .env.example, README.md
-  packages/api/ — same as monolith src/
-  packages/web/ — full React/Vite frontend with src/App.tsx, src/main.tsx, index.html, vite.config.ts
-  packages/shared/ — shared types and utilities
+Rules:
+- Use this delimiter format ONLY. No JSON, no prose, no markdown outside file blocks.
+- Paths are relative to project root, no leading slash.
+- TypeScript everywhere (except HTML/CSS/JSON config files).
+- All imports must use correct relative paths.
+- package.json: include ALL runtime and dev dependencies, scripts: dev/build/start/test.
+- .env.example: list every env var the code reads.
+- Code must be syntactically correct, complete, runnable — NO placeholders, NO "// TODO", NO stub functions.
+- README.md: title, description, setup steps, env var list.
 
-Generate at least 8 meaningful files with real, working implementation code. If the project is a landing page or website, generate real HTML with semantic markup, CSS with proper styles, and any required JS.`;
+Required files for MONOLITH mode:
+  package.json
+  tsconfig.json
+  .env.example
+  README.md
+  src/index.ts            (entry — boots server/app)
+  src/routes/index.ts     (route definitions)
+  src/services/           (business logic, one file per domain)
+  src/middleware/         (auth, error handling, validation)
+  src/types/index.ts      (shared TypeScript interfaces)
+  For web/landing page projects: src/public/index.html + src/public/styles.css with real, complete HTML and CSS
+
+Required files for MONOREPO mode:
+  package.json            (workspaces config)
+  tsconfig.json
+  .env.example
+  README.md
+  packages/api/package.json
+  packages/api/src/index.ts
+  packages/api/src/routes/index.ts
+  packages/web/package.json
+  packages/web/vite.config.ts
+  packages/web/index.html
+  packages/web/src/main.tsx
+  packages/web/src/App.tsx
+  packages/shared/src/types.ts
+
+Generate at minimum 10 meaningful files with real implementation. Every file must contain working code that matches the project requirements.`;
+
 
 
   const humanMessage = `Project: ${project_title}
@@ -115,21 +148,29 @@ Mode: ${mode}`;
   const raw = (response.content as string).trim();
 
   let files: Array<{ path: string; content: string }>;
-  try {
-    const parsed = parseAgentResponse(raw);
-    if (!Array.isArray(parsed)) {
-      throw new Error("Response is not an array");
-    }
-    files = (parsed as Array<{ path: string; content: string }>).filter(
-      (f) => typeof f.path === "string" && typeof f.content === "string"
-    );
-    if (files.length === 0) {
-      console.warn("[CodeGenerator] Empty manifest, using fallback files");
+
+  // Primary: delimiter format — immune to JSON encoding issues in file content
+  const delimiterFiles = parseDelimiterFormat(raw);
+  if (delimiterFiles.length >= 3) {
+    files = delimiterFiles;
+  } else {
+    // Fallback: try JSON (handles responses that still use JSON format)
+    try {
+      const parsed = parseAgentResponse(raw);
+      if (!Array.isArray(parsed)) throw new Error("not array");
+      const jsonFiles = (parsed as Array<{ path: string; content: string }>).filter(
+        (f) => typeof f.path === "string" && typeof f.content === "string"
+      );
+      if (jsonFiles.length >= 3) {
+        files = jsonFiles;
+      } else {
+        console.warn("[CodeGenerator] Both parsers yielded <3 files, using fallback");
+        files = FALLBACK_FILES;
+      }
+    } catch (e) {
+      console.warn("[CodeGenerator] Parse failed, using fallback:", e instanceof Error ? e.message : String(e));
       files = FALLBACK_FILES;
     }
-  } catch (e) {
-    console.warn("[CodeGenerator] Parse failed, using fallback:", e instanceof Error ? e.message : String(e));
-    files = FALLBACK_FILES;
   }
 
   // Write files to disk
