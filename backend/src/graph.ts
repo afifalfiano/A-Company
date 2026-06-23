@@ -133,10 +133,6 @@ function planningRouter(state: CompanyStateType) {
   return "cto";
 }
 
-function executionRouter(_state: CompanyStateType) {
-  return "engineer";
-}
-
 // ─── Graph ────────────────────────────────────────────────────────────────────
 
 export function buildGraph(emit: (event: AgentEvent) => void) {
@@ -153,6 +149,7 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addNode("engineer",         (state: CompanyStateType) => withRetry("engineer",         engineerAgent,          state, emit));
   graph.addNode("designer",          (state: CompanyStateType) => withRetry("designer",         designerAgent,          state, emit));
   graph.addNode("qa",               (state: CompanyStateType) => withRetry("qa",               qaAgent,                state, emit));
+  graph.addNode("execution_router", (_state: CompanyStateType) => ({}));
   graph.addNode("ceo_review",        (state: CompanyStateType) => deterministicReview(state, emit));
   graph.addNode("finalize", (state: CompanyStateType) => {
     const proj = state.current_project;
@@ -214,26 +211,17 @@ export function buildGraph(emit: (event: AgentEvent) => void) {
   graph.addEdge("product_manager", "execution_checkpoint");
   graph.addEdge("business_marketing", "execution_checkpoint");
 
-  // Execution checkpoint — human gate before running execution agents
-  // Reject → sends back to engineer (incomplete, needs revision)
-  // Approve → continues to designer
+  // execution_checkpoint → execution_router → [engineer || designer] in parallel
   graph.addConditionalEdges(
     "execution_checkpoint",
-    (state: CompanyStateType) => {
-      // Check if execution was explicitly rejected via approve_execution
-      // Project moves to execution phase only when user explicitly rejects
-      // First run auto-approves (execution_approved: true set in index.ts)
-      if (state.current_project.execution_approved === false &&
-          state.current_project.current_phase === "execution") {
-        return "engineer"; // Rejected → re-run engineer with revision notes
-      }
-      return "engineer"; // Auto-approved → run engineer
-    },
-    { engineer: "engineer" }
+    (_state: CompanyStateType) => "execution_router",
+    { execution_router: "execution_router" }
   );
+  graph.addEdge("execution_router", "engineer");
+  graph.addEdge("execution_router", "designer");
 
-  // Engineer → Designer → QA (full sequence regardless of complexity)
-  graph.addEdge("engineer", "designer");
+  // Both fan-in to qa
+  graph.addEdge("engineer", "qa");
   graph.addEdge("designer", "qa");
 
   // QA → CEO Review → Finalize → END (no auto code-gen)
